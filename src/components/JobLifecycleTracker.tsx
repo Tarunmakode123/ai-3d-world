@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useSimulation } from '../simulation/SimulationContext'
 import type { JobStage } from '../types/simulation'
-import { Layers, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 interface JobLifecycleTrackerProps {
   selectedStageFilter: JobStage | null
@@ -14,23 +14,70 @@ export const JobLifecycleTracker: React.FC<JobLifecycleTrackerProps> = ({
   onSelectStageFilter,
   onOpenJobsTab,
 }) => {
-  const { jobs, metrics } = useSimulation()
+  const { metrics } = useSimulation()
+  const [selectedCluster, setSelectedCluster] = useState('All Clusters')
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  const stages: { id: JobStage; label: string; color: string }[] = [
-    { id: 'queued', label: 'Queued', color: 'text-slate-400' },
-    { id: 'scheduled', label: 'Scheduled', color: 'text-blue-400' },
-    { id: 'running', label: 'Running', color: 'text-cyan-400' },
-    { id: 'checkpoint', label: 'Checkpoint', color: 'text-purple-400' },
-    { id: 'evaluating', label: 'Evaluating', color: 'text-amber-400' },
-    { id: 'done', label: 'Done', color: 'text-emerald-400' },
+  // Workload counts matching IMAGE 2
+  const workloadItems: {
+    stage: JobStage
+    label: string
+    count: number
+    color: string
+    barColor: string
+    percentage: number
+  }[] = [
+    {
+      stage: 'queued',
+      label: 'Queued',
+      count: metrics.workloadCounts?.queued ?? 312,
+      color: 'text-slate-300',
+      barColor: 'bg-slate-400',
+      percentage: 22,
+    },
+    {
+      stage: 'scheduled',
+      label: 'Scheduled',
+      count: metrics.workloadCounts?.scheduled ?? 186,
+      color: 'text-blue-300',
+      barColor: 'bg-blue-400',
+      percentage: 14,
+    },
+    {
+      stage: 'running',
+      label: 'Running',
+      count: metrics.workloadCounts?.running ?? 1428,
+      color: 'text-cyan-300',
+      barColor: 'bg-cyan-400',
+      percentage: 68,
+    },
+    {
+      stage: 'checkpoint',
+      label: 'Checkpoint',
+      count: metrics.workloadCounts?.checkpoint ?? 96,
+      color: 'text-purple-300',
+      barColor: 'bg-purple-400',
+      percentage: 8,
+    },
+    {
+      stage: 'done',
+      label: 'Completed',
+      count: metrics.workloadCounts?.completed ?? 3842,
+      color: 'text-emerald-300',
+      barColor: 'bg-emerald-400',
+      percentage: 85,
+    },
+    {
+      stage: 'archived',
+      label: 'Archived',
+      count: metrics.workloadCounts?.archived ?? 12614,
+      color: 'text-slate-400',
+      barColor: 'bg-slate-500',
+      percentage: 95,
+    },
   ]
 
-  const stageCounts = stages.reduce((acc, s) => {
-    acc[s.id] = jobs.filter((j) => j.stage === s.id).length
-    return acc
-  }, {} as Record<JobStage, number>)
-
-  const handleStageClick = (stage: JobStage) => {
+  const handleRowClick = (stage: JobStage) => {
     if (selectedStageFilter === stage) {
       onSelectStageFilter(null)
     } else {
@@ -40,54 +87,68 @@ export const JobLifecycleTracker: React.FC<JobLifecycleTrackerProps> = ({
   }
 
   return (
-    <div className="absolute bottom-4 left-3 sm:left-5 z-20 pointer-events-none">
-      <div className="glass-panel rounded-xl p-2.5 sm:p-3 pointer-events-auto max-w-[calc(100vw-30px)] overflow-x-auto shadow-2xl">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-300">
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span>AI Job Lifecycle Pipeline</span>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-            <span>Completed Total:</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              {metrics.completedJobsTotal}
-            </span>
-          </div>
-        </div>
+    <div className="w-full glass-panel rounded-2xl p-4 shadow-2xl pointer-events-auto">
+      {/* Header matching IMAGE 2 */}
+      <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
+        <h4 className="text-xs font-mono font-bold tracking-wider text-slate-300 uppercase">
+          WORKLOAD TRACKER
+        </h4>
 
-        {/* 6-Stage Horizontal Interactive Progression Bar */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          {stages.map((stage, idx) => {
-            const count = stageCounts[stage.id]
-            const isSelected = selectedStageFilter === stage.id
-
-            return (
-              <React.Fragment key={stage.id}>
+        {/* Cluster Filter Dropdown (IMAGE 2: All Clusters ▼) */}
+        <div className="relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800 transition-colors cursor-pointer"
+          >
+            <span>{selectedCluster}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+          {isDropdownOpen && (
+            <div className="absolute top-full right-0 mt-1 z-50 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl py-1 backdrop-blur-md">
+              {['All Clusters', 'Cluster Alpha', 'Cluster Beta', 'Inference Swarm'].map((c) => (
                 <button
-                  onClick={() => handleStageClick(stage.id)}
-                  className={`flex flex-col items-center justify-center min-w-[58px] sm:min-w-[68px] py-1.5 px-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                    isSelected
-                      ? 'bg-cyan-500/30 border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.25)]'
-                      : 'bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800'
-                  }`}
-                  title={`Filter by ${stage.label} jobs`}
+                  key={c}
+                  onClick={() => {
+                    setSelectedCluster(c)
+                    setIsDropdownOpen(false)
+                  }}
+                  className="w-full text-left px-2.5 py-1 text-[11px] font-mono text-slate-300 hover:bg-slate-800"
                 >
-                  <div className="flex items-center gap-1">
-                    <span className={`text-[10px] font-mono font-semibold ${stage.color}`}>
-                      {stage.label}
-                    </span>
-                  </div>
-                  <div className="text-sm font-bold font-mono text-white mt-0.5">{count}</div>
+                  {c}
                 </button>
-
-                {idx < stages.length - 1 && (
-                  <ChevronRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
-                )}
-              </React.Fragment>
-            )
-          })}
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Rows with Horizontal Progress Bars matching IMAGE 2 */}
+      <div className="space-y-2">
+        {workloadItems.map((item) => {
+          const isSelected = selectedStageFilter === item.stage
+          return (
+            <button
+              key={item.stage}
+              onClick={() => handleRowClick(item.stage)}
+              className={`w-full text-left p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isSelected
+                  ? 'bg-cyan-500/20 border border-cyan-400/40'
+                  : 'hover:bg-slate-800/40 border border-transparent'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-mono mb-1">
+                <span className={`font-medium ${item.color}`}>{item.label}</span>
+                <span className="font-bold text-white">{item.count.toLocaleString()}</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-800/90 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${item.barColor} rounded-full transition-all duration-500`}
+                  style={{ width: `${item.percentage}%` }}
+                />
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

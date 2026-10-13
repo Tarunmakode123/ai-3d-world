@@ -15,7 +15,7 @@ import { Flame, CloudLightning, AlertTriangle } from 'lucide-react'
 const CorelineDashboard: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
-  const [activeTableTab, setActiveTableTab] = useState<'racks' | 'jobs' | 'incidents'>('racks')
+  const [activeTableTab, setActiveTableTab] = useState<'halls' | 'jobs' | 'power'>('halls')
   const [stageFilter, setStageFilter] = useState<JobStage | null>(null)
 
   const { weather, incidents } = useSimulation()
@@ -58,17 +58,21 @@ const CorelineDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* 5. Right-Side Object Detail Panel */}
-      <ObjectDetailModal />
+      {/* 5. Right Sidebar: Object Detail Panel & Workload Tracker (IMAGE 2) */}
+      <div className="absolute top-14 sm:top-16 right-3 sm:right-5 z-20 flex flex-col gap-3 w-80 sm:w-96 max-h-[calc(100vh-80px)] overflow-y-auto pointer-events-none pr-0.5">
+        <div className="pointer-events-auto">
+          <ObjectDetailModal />
+        </div>
+        <div className="pointer-events-auto">
+          <JobLifecycleTracker
+            selectedStageFilter={stageFilter}
+            onSelectStageFilter={setStageFilter}
+            onOpenJobsTab={() => setActiveTableTab('jobs')}
+          />
+        </div>
+      </div>
 
-      {/* 6. Bottom-Left Job Lifecycle Pipeline Tracker */}
-      <JobLifecycleTracker
-        selectedStageFilter={stageFilter}
-        onSelectStageFilter={setStageFilter}
-        onOpenJobsTab={() => setActiveTableTab('jobs')}
-      />
-
-      {/* 7. Bottom-Right Live Telemetry Table Drawer */}
+      {/* 6. Bottom Operations Table Drawer (IMAGE 2: Halls, Jobs, Power) */}
       <TelemetryDrawer
         activeTab={activeTableTab}
         setActiveTab={setActiveTableTab}

@@ -13,6 +13,8 @@ import type {
   Vehicle,
   OverallMetrics,
   SelectedObject,
+  HallTableRow,
+  InWorldBadge,
 } from '../types/simulation'
 import {
   generateInitialRacks,
@@ -20,6 +22,8 @@ import {
   initialPowerUnits,
   initialNetworkUnits,
   initialDataHalls,
+  initialHallTableRows,
+  initialInWorldBadges,
   initialJobs,
   initialIncidents,
   initialVehicles,
@@ -61,6 +65,9 @@ interface SimulationContextType {
   powerUnits: PowerUnit[]
   networkUnits: NetworkUnit[]
   dataHalls: DataHall[]
+  halls: DataHall[]
+  hallTableRows: HallTableRow[]
+  inWorldBadges: InWorldBadge[]
   jobs: AIJob[]
   incidents: Incident[]
   vehicles: Vehicle[]
@@ -79,9 +86,15 @@ const SimulationContext = createContext<SimulationContextType | null>(null)
 
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [weather, setWeatherState] = useState<WeatherType>('clear')
-  const [dayNight, setDayNight] = useState<DayNightMode>('night') // default futuristic night/dusk vibe
+  const [dayNight, setDayNight] = useState<DayNightMode>('night') // default to rich night / industrial lighting as in IMAGE 2
   const [currentArea, setCurrentAreaState] = useState<AreaId>('overview')
-  const [selectedObject, setSelectedObjectState] = useState<SelectedObject | null>(null)
+  const [selectedObject, setSelectedObjectState] = useState<SelectedObject | null>(() => ({
+    id: 'hall-a',
+    name: 'HALL A',
+    type: 'hall',
+    position: [-6, 5, -4],
+    data: initialDataHalls[0],
+  })) // Default open Hall A panel as shown in IMAGE 2!
   const [isCinematic, setIsCinematic] = useState<boolean>(false)
   const [isHeatOverlay, setIsHeatOverlay] = useState<boolean>(false)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false)
@@ -100,19 +113,29 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [powerUnits, setPowerUnits] = useState<PowerUnit[]>(initialPowerUnits)
   const [networkUnits] = useState<NetworkUnit[]>(initialNetworkUnits)
   const [dataHalls] = useState<DataHall[]>(initialDataHalls)
+  const [hallTableRows, setHallTableRows] = useState<HallTableRow[]>(initialHallTableRows)
+  const [inWorldBadges] = useState<InWorldBadge[]>(initialInWorldBadges)
   const [jobs, setJobs] = useState<AIJob[]>(initialJobs)
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents)
   const [vehicles] = useState<Vehicle[]>(initialVehicles)
 
-  // Overall KPIs
+  // Overall KPIs exactly matching IMAGE 2
   const [metrics, setMetrics] = useState<OverallMetrics>({
-    gpuUtilisation: 76.5,
-    powerDrawMw: 10.42,
-    pue: 1.14,
-    totalComputePFlops: 1420.8,
-    activeJobs: 8,
-    completedJobsTotal: 124,
-    coolingDemandPct: 78.0,
+    gpuUtilisation: 78.0,
+    gpuUtilTrend: 6,
+    activeGpus: 68416,
+    totalGpus: 87552,
+    powerDrawMw: 84.2,
+    totalItLoadMw: 84.2,
+    pue: 1.18,
+    pueTrend: -4,
+    jobsInQueue: 312,
+    jobsQueueTrend: 23,
+    estWaitTimeMin: 14,
+    totalComputePFlops: 2480.0,
+    activeJobs: 1428,
+    completedJobsTotal: 3842,
+    coolingDemandPct: 92.0,
     gridFrequencyHz: 50.01,
   })
 
@@ -146,12 +169,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [])
 
   const focusOnPosition = useCallback(
-    (pos: [number, number, number], lookAtOffset: [number, number, number] = [0, 0, 0], distance: number = 24) => {
-      // Calculate sensible camera offset angle (elevated 3/4 isometric perspective)
+    (pos: [number, number, number], lookAtOffset: [number, number, number] = [0, 0, 0], distance: number = 26) => {
+      // Perspective camera offset matching the elevated diagonal 3/4 aerial view
       const camTarget: [number, number, number] = [
-        pos[0] + distance * 0.7,
-        pos[1] + distance * 0.85,
-        pos[2] + distance * 0.7,
+        pos[0] - distance * 0.75,
+        pos[1] + distance * 0.9,
+        pos[2] + distance * 0.85,
       ]
       const camLookAt: [number, number, number] = [
         pos[0] + lookAtOffset[0],
@@ -183,87 +206,31 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Area camera presets
       switch (area) {
         case 'overview':
-          focusOnPosition([0, 0, 0], [0, 0, 0], 55)
+          focusOnPosition([0, 2, 0], [0, 0, 0], 55)
           break
         case 'hall-a':
-          focusOnPosition([-26, 2, 6], [0, 0, 0], 28)
+          focusOnPosition([-6, 4, -4], [0, 0, 0], 28)
           break
         case 'hall-b':
-          focusOnPosition([26, 2, 6], [0, 0, 0], 28)
+          focusOnPosition([16, 4, -14], [0, 0, 0], 28)
           break
         case 'cooling':
-          focusOnPosition([-20, 2, -26], [0, 0, 0], 25)
+          focusOnPosition([-30, 4, -24], [0, 0, 0], 30)
           break
         case 'power':
-          focusOnPosition([26, 2, -20], [0, 0, 0], 26)
+          focusOnPosition([-38, 3, 10], [0, 0, 0], 30)
           break
         case 'network':
-          focusOnPosition([0, 1.5, -20], [0, 0, 0], 22)
+          focusOnPosition([26, 3, -26], [0, 0, 0], 24)
           break
       }
     },
     [focusOnPosition]
   )
 
-  // Focus asset by ID from search, tables, or alerts
+  // Focus asset by ID from search, tables, badges, or alerts
   const focusAssetById = useCallback(
     (id: string) => {
-      // Search in Racks
-      const rack = racks.find((r) => r.id === id)
-      if (rack) {
-        setSelectedObject({
-          id: rack.id,
-          name: `${rack.id} (${rack.gpuType})`,
-          type: 'rack',
-          position: rack.position,
-          data: rack,
-        })
-        focusOnPosition(rack.position, [0, 0.5, 0], 14)
-        return
-      }
-
-      // Search in Cooling
-      const cool = coolingUnits.find((c) => c.id === id)
-      if (cool) {
-        setSelectedObject({
-          id: cool.id,
-          name: cool.name,
-          type: 'cooling',
-          position: cool.position,
-          data: cool,
-        })
-        focusOnPosition(cool.position, [0, 1, 0], 18)
-        return
-      }
-
-      // Search in Power
-      const power = powerUnits.find((p) => p.id === id)
-      if (power) {
-        setSelectedObject({
-          id: power.id,
-          name: power.name,
-          type: 'power',
-          position: power.position,
-          data: power,
-        })
-        focusOnPosition(power.position, [0, 1, 0], 18)
-        return
-      }
-
-      // Search in Network
-      const net = networkUnits.find((n) => n.id === id)
-      if (net) {
-        setSelectedObject({
-          id: net.id,
-          name: net.name,
-          type: 'network',
-          position: net.position,
-          data: net,
-        })
-        focusOnPosition(net.position, [0, 1, 0], 18)
-        return
-      }
-
       // Search in Halls
       const hall = dataHalls.find((h) => h.id === id)
       if (hall) {
@@ -278,6 +245,62 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return
       }
 
+      // Search in Racks
+      const rack = racks.find((r) => r.id === id)
+      if (rack) {
+        setSelectedObject({
+          id: rack.id,
+          name: `${rack.id} (${rack.gpuType})`,
+          type: 'rack',
+          position: rack.position,
+          data: rack,
+        })
+        focusOnPosition(rack.position, [0, 0.5, 0], 16)
+        return
+      }
+
+      // Search in Cooling
+      const cool = coolingUnits.find((c) => c.id === id)
+      if (cool) {
+        setSelectedObject({
+          id: cool.id,
+          name: cool.name,
+          type: 'cooling',
+          position: cool.position,
+          data: cool,
+        })
+        focusOnPosition(cool.position, [0, 1, 0], 22)
+        return
+      }
+
+      // Search in Power
+      const power = powerUnits.find((p) => p.id === id)
+      if (power) {
+        setSelectedObject({
+          id: power.id,
+          name: power.name,
+          type: 'power',
+          position: power.position,
+          data: power,
+        })
+        focusOnPosition(power.position, [0, 1, 0], 22)
+        return
+      }
+
+      // Search in Network
+      const net = networkUnits.find((n) => n.id === id)
+      if (net) {
+        setSelectedObject({
+          id: net.id,
+          name: net.name,
+          type: 'network',
+          position: net.position,
+          data: net,
+        })
+        focusOnPosition(net.position, [0, 1, 0], 20)
+        return
+      }
+
       // Search in Vehicles
       const veh = vehicles.find((v) => v.id === id)
       if (veh) {
@@ -288,7 +311,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           position: veh.position,
           data: veh,
         })
-        focusOnPosition(veh.position, [0, 0.5, 0], 15)
+        focusOnPosition(veh.position, [0, 0.5, 0], 16)
         return
       }
     },
@@ -305,7 +328,6 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return inc
       })
     )
-    // Clear fault on asset
     setRacks((prev) =>
       prev.map((r) => {
         const matchingInc = incidents.find((inc) => inc.id === id && inc.affectedAssetId === r.id)
@@ -318,7 +340,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     soundManager.playClick()
   }, [incidents])
 
-  // Trigger generator test (Storm or Manual)
+  // Trigger generator test
   const triggerGeneratorTest = useCallback(() => {
     setPowerUnits((prev) =>
       prev.map((p) => {
@@ -326,7 +348,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           return {
             ...p,
             operationalStatus: 'Testing',
-            powerOutputMw: 3.5,
+            powerOutputMw: 48.0,
           }
         }
         return p
@@ -362,7 +384,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       affectedAssetId: randomRack.id,
       assetType: 'rack',
       title: `Subsystem Thermal Variance [${randomRack.id}]`,
-      description: `Cooling manifold delta-T alert in aisle row ${randomRack.row + 1}. Auto dispatching service cart.`,
+      description: `Cooling manifold delta-T alert in aisle row ${randomRack.row + 1}. Auto dispatching service rover.`,
       severity: 'warning',
       status: 'Detected',
       timestamp: Date.now(),
@@ -385,7 +407,6 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         let jobCompletedCount = 0
         const updated = prevJobs.map((job) => {
           if (job.stage === 'queued') {
-            // Chance to move to scheduled
             return { ...job, stage: 'scheduled' as const }
           }
           if (job.stage === 'scheduled') {
@@ -409,11 +430,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             }
             return { ...job, progress: nextProgress }
           }
-          // 'done' stage
           return job
         })
 
-        // If a job finished, spawn a new fresh queued job
         if (jobCompletedCount > 0) {
           const newJobNum = newJobCounterRef.current++
           const workloads = [
@@ -451,14 +470,14 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return updated
       })
 
-      // 2. Telemetry drift for Server Racks (fluctuate slightly according to load)
+      // 2. Telemetry drift for Server Racks
       setRacks((prevRacks) => {
         return prevRacks.map((r) => {
-          const jitter = (Math.random() - 0.5) * 3
-          const newUtil = Math.min(100, Math.max(20, Math.round(r.gpuUtilisation + jitter)))
-          const baseTemp = 38 + newUtil * 0.4 + (r.hasFault ? 25 : 0)
+          const jitter = (Math.random() - 0.5) * 2
+          const newUtil = Math.min(100, Math.max(30, Math.round(r.gpuUtilisation + jitter)))
+          const baseTemp = 42 + newUtil * 0.35 + (r.hasFault ? 25 : 0)
           const newTemp = Math.round(baseTemp + (Math.random() - 0.5) * 1.5)
-          const newPower = parseFloat((6.5 + (newUtil / 100) * 8.5).toFixed(2))
+          const newPower = parseFloat((8.5 + (newUtil / 100) * 6.5).toFixed(2))
           return {
             ...r,
             gpuUtilisation: newUtil,
@@ -482,9 +501,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             nextStatus = 'Repairing'
           } else if (inc.status === 'Repairing' && nextSec >= 36) {
             nextStatus = 'Resolved'
-            // Auto repair rack
             setRacks((rs) =>
-              rs.map((r) => (r.id === inc.affectedAssetId ? { ...r, hasFault: false, health: 'healthy', temperature: 46 } : r))
+              rs.map((r) => (r.id === inc.affectedAssetId ? { ...r, hasFault: false, health: 'healthy', temperature: 48 } : r))
             )
           }
           return {
@@ -495,48 +513,40 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         })
       })
 
-      // 4. Update overall metrics (PUE, Total MW, GPU Util) based on current environment and load
-      setRacks((currentRacks) => {
-        const totalRackKw = currentRacks.reduce((acc, r) => acc + r.powerKw, 0)
-        const avgGpu = currentRacks.reduce((acc, r) => acc + r.gpuUtilisation, 0) / currentRacks.length
+      // 4. Update overall metrics
+      setMetrics((prev) => {
+        const utilJitter = (Math.random() - 0.5) * 0.4
+        const newUtil = Math.round((prev.gpuUtilisation + utilJitter) * 10) / 10
 
-        // Weather multiplier on cooling and PUE
         let weatherPuePenalty = 0.0
-        let weatherCoolingBonus = 0
         if (weather === 'heatwave') {
-          weatherPuePenalty = 0.08
-          weatherCoolingBonus = 16
+          weatherPuePenalty = 0.06
         } else if (weather === 'monsoon' || weather === 'storm') {
           weatherPuePenalty = -0.02
-          weatherCoolingBonus = -5
         }
 
-        const basePue = 1.12 + (avgGpu / 100) * 0.06 + weatherPuePenalty
-        const totalPowerMw = parseFloat(((totalRackKw / 1000) * basePue).toFixed(2))
+        const basePue = 1.18 + (newUtil - 78) * 0.003 + weatherPuePenalty
 
-        setMetrics((prev) => ({
+        return {
           ...prev,
-          gpuUtilisation: Math.round(avgGpu * 10) / 10,
-          powerDrawMw: totalPowerMw,
-          pue: Math.max(1.04, Math.round(basePue * 100) / 100),
-          coolingDemandPct: Math.min(99, Math.round(avgGpu * 0.95 + weatherCoolingBonus)),
-          gridFrequencyHz: Math.round((50.0 + (Math.random() - 0.5) * 0.04) * 100) / 100,
-        }))
-
-        // Keep current selected object data fresh
-        setSelectedObjectState((currentSel) => {
-          if (!currentSel) return null
-          if (currentSel.type === 'rack') {
-            const freshRack = currentRacks.find((r) => r.id === currentSel.id)
-            if (freshRack) {
-              return { ...currentSel, data: freshRack }
-            }
-          }
-          return currentSel
-        })
-
-        return currentRacks
+          gpuUtilisation: Math.min(99, Math.max(50, newUtil)),
+          pue: Math.max(1.08, Math.round(basePue * 100) / 100),
+          powerDrawMw: Math.round((84.2 + (newUtil - 78) * 0.4) * 10) / 10,
+          totalItLoadMw: Math.round((84.2 + (newUtil - 78) * 0.35) * 10) / 10,
+          gridFrequencyHz: Math.round((50.0 + (Math.random() - 0.5) * 0.03) * 100) / 100,
+        }
       })
+
+      // Update Hall Table Rows
+      setHallTableRows((prevRows) =>
+        prevRows.map((row) => {
+          const jitter = (Math.random() - 0.5) * 1.5
+          return {
+            ...row,
+            gpuUtil: Math.min(100, Math.max(20, Math.round(row.gpuUtil + jitter))),
+          }
+        })
+      )
     }, 1500)
 
     return () => clearInterval(interval)
@@ -567,6 +577,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         powerUnits,
         networkUnits,
         dataHalls,
+        halls: dataHalls,
+        hallTableRows,
+        inWorldBadges,
         jobs,
         incidents,
         vehicles,

@@ -2,18 +2,17 @@ import React, { useState } from 'react'
 import { useSimulation } from '../simulation/SimulationContext'
 import type { JobStage } from '../types/simulation'
 import {
-  Server,
+  Building2,
   Terminal,
-  AlertOctagon,
+  Zap,
   ChevronUp,
   ChevronDown,
-  Search,
-  ExternalLink,
 } from 'lucide-react'
+import type { DataHall } from '../types/simulation'
 
 interface TelemetryDrawerProps {
-  activeTab: 'racks' | 'jobs' | 'incidents'
-  setActiveTab: (tab: 'racks' | 'jobs' | 'incidents') => void
+  activeTab: string
+  setActiveTab: (tab: any) => void
   stageFilter: JobStage | null
 }
 
@@ -22,67 +21,63 @@ export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
   setActiveTab,
   stageFilter,
 }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [isOpen, setIsOpen] = useState<boolean>(true)
 
   const {
-    racks,
+    hallTableRows,
     jobs,
-    incidents,
-    focusAssetById,
-    resolveIncident,
+    setSelectedObject,
+    halls,
+    focusOnPosition,
   } = useSimulation()
-
-  // Filter Racks
-  const filteredRacks = racks.filter(
-    (r) =>
-      r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.gpuType.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   // Filter Jobs
   const filteredJobs = jobs.filter((j) => {
-    const matchesSearch =
-      j.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (j.assignedRackId && j.assignedRackId.toLowerCase().includes(searchQuery.toLowerCase()))
     const matchesStage = stageFilter ? j.stage === stageFilter : true
-    return matchesSearch && matchesStage
+    return matchesStage
   })
 
-  // Filter Incidents
-  const filteredIncidents = incidents.filter(
-    (i) =>
-      i.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.affectedAssetId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleSelectHall = (hallId: string) => {
+    const found = halls.find((h: DataHall) => h.id === hallId) || halls[0]
+    if (found) {
+      setSelectedObject({
+        id: found.id,
+        name: found.name,
+        type: 'hall',
+        position: [found.id === 'hall-a' ? -4 : 8, 4, -4],
+        data: found,
+      })
+      focusOnPosition([found.id === 'hall-a' ? -4 : 8, 4, -4], [0, 1, 0], 28)
+    }
+  }
 
-  const activeIncidents = incidents.filter((i) => i.status !== 'Resolved').length
+  const currentTab = activeTab === 'racks' || activeTab === 'incidents' ? 'halls' : activeTab
 
   return (
-    <div className="absolute bottom-4 right-3 sm:right-5 z-20 pointer-events-none">
+    <div className="absolute bottom-3 left-3 sm:left-5 z-20 pointer-events-none">
       <div
         className={`glass-panel rounded-2xl pointer-events-auto transition-all duration-300 shadow-2xl flex flex-col ${
-          isOpen ? 'w-[92vw] sm:w-[580px] md:w-[680px] h-[360px]' : 'w-auto'
+          isOpen
+            ? 'w-[calc(100vw-24px)] sm:w-[720px] md:w-[860px] lg:w-[980px] max-w-[calc(100vw-420px)]'
+            : 'w-auto'
         }`}
       >
-        {/* Drawer Header & Tabs */}
-        <div className="flex items-center justify-between p-2 sm:p-2.5 border-b border-slate-800">
-          <div className="flex items-center gap-1">
+        {/* Drawer Header & Tabs (IMAGE 2: Halls | Jobs | Power) */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => {
-                setActiveTab('racks')
+                setActiveTab('halls')
                 if (!isOpen) setIsOpen(true)
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                activeTab === 'racks' && isOpen
-                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 font-semibold'
+                currentTab === 'halls' && isOpen
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Server className="w-3.5 h-3.5" />
-              <span>Racks ({racks.length})</span>
+              <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Halls</span>
             </button>
 
             <button
@@ -91,285 +86,165 @@ export const TelemetryDrawer: React.FC<TelemetryDrawerProps> = ({
                 if (!isOpen) setIsOpen(true)
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                activeTab === 'jobs' && isOpen
-                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 font-semibold'
+                currentTab === 'jobs' && isOpen
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Terminal className="w-3.5 h-3.5" />
+              <Terminal className="w-3.5 h-3.5 text-blue-400" />
               <span>Jobs ({jobs.length})</span>
             </button>
 
             <button
               onClick={() => {
-                setActiveTab('incidents')
+                setActiveTab('power')
                 if (!isOpen) setIsOpen(true)
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer relative ${
-                activeTab === 'incidents' && isOpen
-                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 font-semibold'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                currentTab === 'power' && isOpen
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <AlertOctagon className="w-3.5 h-3.5 text-amber-400" />
-              <span>Incidents</span>
-              {activeIncidents > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
-                  {activeIncidents}
-                </span>
-              )}
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Power</span>
             </button>
           </div>
 
-          {/* Toggle Expand / Collapse */}
+          {/* Toggle Expand / Minimize */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-            title={isOpen ? 'Minimize Drawer' : 'Expand Live Telemetry Table'}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer text-[11px] font-mono"
+            title={isOpen ? 'Minimize Table' : 'Expand Live Operations Table'}
           >
-            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            <span>{isOpen ? 'Collapse' : 'Expand'}</span>
+            {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        {/* Expanded Table Content */}
+        {/* Expanded Content */}
         {isOpen && (
-          <div className="flex-1 flex flex-col p-3 overflow-hidden">
-            {/* Search Filter Bar */}
-            <div className="relative mb-2.5">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                placeholder={`Filter ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 rounded-lg pl-8 pr-3 py-1 text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
-              />
-            </div>
-
-            {/* Tab 1: RACKS TABLE */}
-            {activeTab === 'racks' && (
-              <div className="flex-1 overflow-y-auto">
-                <table className="w-full text-left border-collapse text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 bg-[#0B1726]/95 backdrop-blur-md">
-                      <th className="py-1.5 px-2">Rack ID</th>
-                      <th className="py-1.5 px-2">Hall</th>
-                      <th className="py-1.5 px-2">GPU Util</th>
-                      <th className="py-1.5 px-2">Temp</th>
-                      <th className="py-1.5 px-2">Power</th>
-                      <th className="py-1.5 px-2">Status</th>
-                      <th className="py-1.5 px-2 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/40 text-slate-300">
-                    {filteredRacks.map((rack) => (
-                      <tr
-                        key={rack.id}
-                        onClick={() => focusAssetById(rack.id)}
-                        className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                      >
-                        <td className="py-2 px-2 font-semibold text-white flex items-center gap-1.5">
+          <div className="p-2.5 sm:p-3 overflow-x-auto max-h-[175px] overflow-y-auto">
+            {/* TAB 1: HALLS TABLE MATCHING IMAGE 2 */}
+            {currentTab === 'halls' && (
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 bg-[#0B1726]/95 backdrop-blur-md">
+                    <th className="py-1 px-2.5">Hall</th>
+                    <th className="py-1 px-2.5">Status</th>
+                    <th className="py-1 px-2.5">Racks</th>
+                    <th className="py-1 px-2.5">GPU Util</th>
+                    <th className="py-1 px-2.5">IT Load</th>
+                    <th className="py-1 px-2.5">Cooling</th>
+                    <th className="py-1 px-2.5">PUE</th>
+                    <th className="py-1 px-2.5">Temp (In/Out)</th>
+                    <th className="py-1 px-2.5 text-right">Active Jobs</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                  {hallTableRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      onClick={() => handleSelectHall(row.id)}
+                      className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-1.5 px-2.5 font-bold text-white group-hover:text-cyan-300">
+                        {row.name}
+                      </td>
+                      <td className="py-1.5 px-2.5">
+                        <span className="flex items-center gap-1.5">
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
-                              rack.hasFault
-                                ? 'bg-rose-400 animate-ping'
-                                : rack.gpuUtilisation > 85
-                                ? 'bg-amber-400'
-                                : 'bg-cyan-400'
+                              row.status === 'Online'
+                                ? 'bg-emerald-400'
+                                : 'bg-amber-400 animate-pulse'
                             }`}
                           />
-                          {rack.id}
-                        </td>
-                        <td className="py-2 px-2 text-slate-400">
-                          {rack.hallId === 'hall-a' ? 'Hall A' : 'Hall B'}
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-8">{rack.gpuUtilisation}%</span>
-                            <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-cyan-400 rounded-full"
-                                style={{ width: `${rack.gpuUtilisation}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td
-                          className={`py-2 px-2 ${
-                            rack.temperature > 75
-                              ? 'text-rose-400 font-bold'
-                              : rack.temperature > 60
-                              ? 'text-amber-400'
-                              : 'text-slate-300'
-                          }`}
-                        >
-                          {rack.temperature}°C
-                        </td>
-                        <td className="py-2 px-2">{rack.powerKw.toFixed(1)} kW</td>
-                        <td className="py-2 px-2">
-                          {rack.hasFault ? (
-                            <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px]">
-                              Fault
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">
-                              Nominal
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 px-2 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              focusAssetById(rack.id)
-                            }}
-                            className="p-1 rounded text-cyan-400 hover:bg-cyan-500/20"
-                            title="Focus in 3D"
+                          <span
+                            className={
+                              row.status === 'Online' ? 'text-slate-300' : 'text-amber-300'
+                            }
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                            {row.status}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-2.5 text-slate-300">{row.racks}</td>
+                      <td className="py-1.5 px-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-7 font-semibold">{row.gpuUtil}%</span>
+                          <div className="w-14 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
+                              style={{ width: `${row.gpuUtil}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-1.5 px-2.5 text-cyan-300 font-semibold">{row.itLoadMw} MW</td>
+                      <td className="py-1.5 px-2.5 text-slate-300">{row.coolingMw} MW</td>
+                      <td className="py-1.5 px-2.5 text-emerald-400 font-semibold">{row.pue.toFixed(2)}</td>
+                      <td className="py-1.5 px-2.5 text-slate-300">
+                        <span className="text-cyan-300">{row.tempIn}°C</span> /{' '}
+                        <span className="text-rose-400">{row.tempOut}°C</span>
+                      </td>
+                      <td className="py-1.5 px-2.5 text-right font-bold text-white">
+                        {row.activeJobs}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
 
-            {/* Tab 2: JOBS TABLE */}
-            {activeTab === 'jobs' && (
-              <div className="flex-1 overflow-y-auto">
-                <table className="w-full text-left border-collapse text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 bg-[#0B1726]/95 backdrop-blur-md">
-                      <th className="py-1.5 px-2">Job ID</th>
-                      <th className="py-1.5 px-2">Workload</th>
-                      <th className="py-1.5 px-2">Assigned Rack</th>
-                      <th className="py-1.5 px-2">Progress</th>
-                      <th className="py-1.5 px-2">Stage</th>
-                      <th className="py-1.5 px-2 text-right">Action</th>
+            {/* TAB 2: JOBS TABLE */}
+            {currentTab === 'jobs' && (
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 bg-[#0B1726]/95 backdrop-blur-md">
+                    <th className="py-1 px-2.5">Job ID</th>
+                    <th className="py-1 px-2.5">Workload</th>
+                    <th className="py-1 px-2.5">Rack</th>
+                    <th className="py-1 px-2.5">Progress</th>
+                    <th className="py-1 px-2.5">Stage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                  {filteredJobs.slice(0, 6).map((job) => (
+                    <tr key={job.id} className="hover:bg-slate-800/40">
+                      <td className="py-1.5 px-2.5 font-semibold text-white">{job.id}</td>
+                      <td className="py-1.5 px-2.5 max-w-[200px] truncate">{job.name}</td>
+                      <td className="py-1.5 px-2.5 text-cyan-300">{job.assignedRackId || 'Queue'}</td>
+                      <td className="py-1.5 px-2.5">{job.progress}%</td>
+                      <td className="py-1.5 px-2.5">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 uppercase">
+                          {job.stage}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/40 text-slate-300">
-                    {filteredJobs.map((job) => (
-                      <tr
-                        key={job.id}
-                        onClick={() => job.assignedRackId && focusAssetById(job.assignedRackId)}
-                        className="hover:bg-slate-800/40 transition-colors cursor-pointer"
-                      >
-                        <td className="py-2 px-2 font-semibold text-white">{job.id}</td>
-                        <td className="py-2 px-2 max-w-[160px] truncate text-slate-200" title={job.name}>
-                          {job.name}
-                        </td>
-                        <td className="py-2 px-2 text-cyan-300">{job.assignedRackId || '—'}</td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-7">{job.progress}%</span>
-                            <div className="w-12 h-1 bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-cyan-400 rounded-full"
-                                style={{ width: `${job.progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                              job.stage === 'running'
-                                ? 'bg-cyan-500/20 text-cyan-300'
-                                : job.stage === 'checkpoint'
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : job.stage === 'evaluating'
-                                ? 'bg-amber-500/20 text-amber-300'
-                                : job.stage === 'done'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : 'bg-slate-700/40 text-slate-400'
-                            }`}
-                          >
-                            {job.stage}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right">
-                          {job.assignedRackId && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                focusAssetById(job.assignedRackId!)
-                              }}
-                              className="p-1 rounded text-cyan-400 hover:bg-cyan-500/20"
-                              title="Focus Assigned Rack"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             )}
 
-            {/* Tab 3: INCIDENTS TABLE */}
-            {activeTab === 'incidents' && (
-              <div className="flex-1 overflow-y-auto">
-                <table className="w-full text-left border-collapse text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 bg-[#0B1726]/95 backdrop-blur-md">
-                      <th className="py-1.5 px-2">Incident ID</th>
-                      <th className="py-1.5 px-2">Asset</th>
-                      <th className="py-1.5 px-2">Title</th>
-                      <th className="py-1.5 px-2">Status</th>
-                      <th className="py-1.5 px-2">Duration</th>
-                      <th className="py-1.5 px-2 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/40 text-slate-300">
-                    {filteredIncidents.map((inc) => (
-                      <tr
-                        key={inc.id}
-                        onClick={() => focusAssetById(inc.affectedAssetId)}
-                        className="hover:bg-slate-800/40 transition-colors cursor-pointer"
-                      >
-                        <td className="py-2 px-2 font-semibold text-amber-400">{inc.id}</td>
-                        <td className="py-2 px-2 text-cyan-300 font-semibold">{inc.affectedAssetId}</td>
-                        <td className="py-2 px-2 max-w-[140px] truncate" title={inc.title}>
-                          {inc.title}
-                        </td>
-                        <td className="py-2 px-2">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                              inc.status === 'Resolved'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : inc.status === 'Repairing'
-                                ? 'bg-cyan-500/20 text-cyan-300 animate-pulse'
-                                : 'bg-amber-500/20 text-amber-300'
-                            }`}
-                          >
-                            {inc.status}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-slate-400">{inc.elapsedSeconds}s</td>
-                        <td className="py-2 px-2 text-right">
-                          {inc.status !== 'Resolved' ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                resolveIncident(inc.id)
-                              }}
-                              className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[10px] font-semibold border border-emerald-400/30 cursor-pointer"
-                            >
-                              Resolve
-                            </button>
-                          ) : (
-                            <span className="text-emerald-400 text-[10px]">OK</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* TAB 3: POWER TABLE */}
+            {currentTab === 'power' && (
+              <div className="grid grid-cols-3 gap-3 text-xs font-mono p-1">
+                <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Primary Grid Feed</div>
+                  <div className="text-base font-bold text-white mt-1">84.2 MW @ 50.02 Hz</div>
+                  <div className="text-[10px] text-emerald-400 mt-0.5">132 kV Substation Tied</div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Backup Generator Yard</div>
+                  <div className="text-base font-bold text-amber-300 mt-1">12x 3.5 MVA Standby</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">72-Hour Fuel Reserve Ready</div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">UPS Energy Storage</div>
+                  <div className="text-base font-bold text-cyan-300 mt-1">Flywheel & LiFePO4</div>
+                  <div className="text-[10px] text-emerald-400 mt-0.5">N+2 Redundant // 99.999% SLA</div>
+                </div>
               </div>
             )}
           </div>

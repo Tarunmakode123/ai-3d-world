@@ -6,9 +6,9 @@ export type DayNightMode = 'day' | 'night'
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical'
 
-export type JobStage = 'queued' | 'scheduled' | 'running' | 'checkpoint' | 'evaluating' | 'done'
+export type JobStage = 'queued' | 'scheduled' | 'running' | 'checkpoint' | 'evaluating' | 'done' | 'archived'
 
-export type AssetType = 'rack' | 'cooling' | 'power' | 'network' | 'hall' | 'vehicle'
+export type AssetType = 'rack' | 'cooling' | 'power' | 'network' | 'hall' | 'vehicle' | 'gate' | 'dock' | 'parking'
 
 export interface AIJob {
   id: string
@@ -105,23 +105,59 @@ export interface DataHall {
   id: 'hall-a' | 'hall-b'
   name: string
   totalRacks: number
+  gpuRacksCount: number
+  totalGpus: number
   activeJobsCount: number
   avgUtilisation: number
   totalPowerMw: number
-  avgTempC: number
+  itLoadMw: number
+  coolingMw: number
+  pue: number
+  inletTempC: number
+  outletTempC: number
   airflowCfm: number
   position: [number, number, number]
 }
 
+export interface HallTableRow {
+  id: string
+  name: string
+  status: 'Online' | 'Maintenance' | 'Degraded' | 'Commissioning'
+  racks: number
+  gpuUtil: number
+  itLoadMw: number
+  coolingMw: number
+  pue: number
+  tempIn: number
+  tempOut: number
+  activeJobs: number
+}
+
 export interface OverallMetrics {
   gpuUtilisation: number
+  gpuUtilTrend: number
+  activeGpus: number
+  totalGpus: number
   powerDrawMw: number
+  totalItLoadMw: number
   pue: number
+  pueTrend: number
+  jobsInQueue: number
+  jobsQueueTrend: number
+  estWaitTimeMin: number
   totalComputePFlops: number
   activeJobs: number
   completedJobsTotal: number
   coolingDemandPct: number
   gridFrequencyHz: number
+  workloadCounts?: {
+    queued: number
+    scheduled: number
+    running: number
+    checkpoint: number
+    completed: number
+    archived: number
+  }
 }
 
 export interface SelectedObject {
@@ -129,5 +165,14 @@ export interface SelectedObject {
   name: string
   type: AssetType
   position: [number, number, number]
-  data: ServerRack | CoolingUnit | PowerUnit | NetworkUnit | DataHall | Vehicle
+  data: ServerRack | CoolingUnit | PowerUnit | NetworkUnit | DataHall | Vehicle | Record<string, unknown>
+}
+
+export interface InWorldBadge {
+  id: string
+  title: string
+  subtitle?: string
+  status?: string
+  position: [number, number, number]
+  type: AssetType
 }
