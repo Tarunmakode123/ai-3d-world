@@ -13,7 +13,6 @@ import {
   Volume2,
   VolumeX,
   Thermometer,
-  Video,
   Info,
   AlertTriangle,
   ChevronDown,
@@ -21,6 +20,7 @@ import {
   EyeOff,
   Maximize2,
   Minimize2,
+  Sparkles,
 } from 'lucide-react'
 
 interface TopNavProps {
@@ -278,17 +278,18 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenSearch, onOpenInfo }) => {
               <Thermometer className="w-3.5 h-3.5" />
             </button>
 
-            {/* Cinematic Tour Toggle */}
+            {/* Cinematic Showcase Mode Trigger */}
             <button
               onClick={toggleCinematic}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
                 isCinematic
-                  ? 'bg-purple-500/30 text-purple-300 border-purple-400/50 animate-pulse'
-                  : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-purple-500/30 text-purple-300 border-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)] animate-pulse'
+                  : 'bg-purple-950/60 hover:bg-purple-900/70 border-purple-500/40 text-purple-300 hover:text-white shadow-sm'
               }`}
-              title="Cinematic Tour"
+              title="Launch Cinematic Architectural Showcase (C)"
             >
-              <Video className="w-3.5 h-3.5 text-purple-400" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Showcase</span>
             </button>
 
             {/* Sound FX Toggle */}

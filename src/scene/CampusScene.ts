@@ -84,7 +84,7 @@ export class CampusScene {
   private cinematicWaypointIndex: number = 0
   private cinematicTimer: number = 0
   public cinematicWaypoints = [
-    { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-21, 40, 46), target: new THREE.Vector3(4, 2.5, -7), duration: 9 },
+    { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-10, 48, 56), target: new THREE.Vector3(5, 2.5, -9), duration: 9 },
     { name: 'Hall A // Foundation Training Cluster', pos: new THREE.Vector3(-12, 16, 8), target: new THREE.Vector3(-11, 2.5, -9), duration: 7 },
     { name: 'Hall B // Inference & MoE Swarm', pos: new THREE.Vector3(16, 16, 4), target: new THREE.Vector3(23, 2.5, -9), duration: 7 },
     { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
@@ -115,8 +115,8 @@ export class CampusScene {
     // 2. Camera: Elevated diagonal 3/4 aerial view matching IMAGE 2
     // Positioned and angled to reveal the open server halls, cooling yard, and power infrastructure
     const aspect = container.clientWidth / container.clientHeight
-    this.camera = new THREE.PerspectiveCamera(38, aspect, 0.5, 450)
-    this.camera.position.set(-21, 40, 46)
+    this.camera = new THREE.PerspectiveCamera(40, aspect, 0.5, 450)
+    this.camera.position.set(-10, 48, 56)
 
     // 3. Renderer with full sRGB color space & balanced tone mapping
     this.renderer = new THREE.WebGLRenderer({
@@ -140,7 +140,7 @@ export class CampusScene {
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05
     this.controls.minDistance = 10
     this.controls.maxDistance = 150
-    this.controls.target.set(4, 2.5, -7)
+    this.controls.target.set(5, 2.5, -9)
 
     // 5. Lighting Setup (Rich nocturnal industrial lighting matching IMAGE 2)
     this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.3)
@@ -272,6 +272,29 @@ export class CampusScene {
       stripe.rotation.x = -Math.PI / 2
       stripe.position.set(i, 0.035, 24)
       this.scene.add(stripe)
+    }
+
+    // Raised Concrete Curbs (Separating asphalt roadway from campus apron)
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.85 })
+    const curbN = new THREE.Mesh(new THREE.BoxGeometry(140, 0.16, 0.3), curbMat)
+    curbN.position.set(0, 0.08, 24.35)
+    const curbS = new THREE.Mesh(new THREE.BoxGeometry(140, 0.16, 0.3), curbMat)
+    curbS.position.set(0, 0.08, 35.65)
+    const curbWestLogistics = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 48), curbMat)
+    curbWestLogistics.position.set(-57.15, 0.08, 6)
+    this.scene.add(curbN, curbS, curbWestLogistics)
+
+    // Painted White Directional Road Arrows
+    const arrowStemGeo = new THREE.PlaneGeometry(0.35, 1.8)
+    const arrowHeadGeo = new THREE.ConeGeometry(0.5, 0.9, 3)
+    arrowHeadGeo.rotateX(-Math.PI / 2)
+    for (let ax of [-30, 20]) {
+      const stem = new THREE.Mesh(arrowStemGeo, whiteLineMat)
+      stem.rotation.x = -Math.PI / 2
+      stem.position.set(ax, 0.035, 32.5)
+      const head = new THREE.Mesh(arrowHeadGeo, whiteLineMat)
+      head.position.set(ax, 0.035, 33.7)
+      this.scene.add(stem, head)
     }
 
     // 3. Streetlights with Warm Industrial Amber Glow (Matching IMAGE 2)
@@ -430,6 +453,23 @@ export class CampusScene {
     // -------------------------------------------------------------
     // 1. EXTERIOR PERIMETER WALLS (NO ROOF BLOCKING THE INTERIORS!)
     // -------------------------------------------------------------
+    // Cast-in-place Industrial Concrete Foundation Plinths
+    const plinthMat = new THREE.MeshStandardMaterial({
+      color: 0x131c26, // heavy architectural concrete foundation
+      roughness: 0.85,
+      metalness: 0.2,
+    })
+    const northPlinth = new THREE.Mesh(new THREE.BoxGeometry(65.2, 0.6, 1.8), plinthMat)
+    northPlinth.position.set(6, 0.3, -32)
+    northPlinth.receiveShadow = true
+    const westPlinth = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 47.2), plinthMat)
+    westPlinth.position.set(-26, 0.3, -9)
+    westPlinth.receiveShadow = true
+    const eastPlinth = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 47.2), plinthMat)
+    eastPlinth.position.set(38, 0.3, -9)
+    eastPlinth.receiveShadow = true
+    complexGroup.add(northPlinth, westPlinth, eastPlinth)
+
     // NORTH EXTERIOR WALL (Rear solid facade)
     // Spans from X: -26 to +38 (Width 64m, Height 7.2m, Thickness 1.2m) at Z: -32
     const northWallGeo = new THREE.BoxGeometry(64, 7.2, 1.2)
@@ -472,6 +512,15 @@ export class CampusScene {
     westSeam2.position.set(-26, 4.8, -9)
     complexGroup.add(westSeam1, westSeam2)
 
+    // West Facade Structural Buttress Columns (Facing Cooling Yard)
+    const buttressGeo = new THREE.BoxGeometry(0.5, 7.2, 0.6)
+    for (let bz = -30; bz <= 12; bz += 7.0) {
+      const buttress = new THREE.Mesh(buttressGeo, steelColumnMat)
+      buttress.position.set(-26.65, 3.6, bz)
+      buttress.castShadow = true
+      complexGroup.add(buttress)
+    }
+
     // Cooling Pipe Flanged Wall Penetrations through West Wall (at X = -26, Y = 3.4)
     const wallSleeveGeo = new THREE.CylinderGeometry(0.72, 0.72, 1.4, 16)
     wallSleeveGeo.rotateZ(Math.PI / 2)
@@ -502,6 +551,14 @@ export class CampusScene {
     const eastSeam2 = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 46.2), wallSeamMat)
     eastSeam2.position.set(38, 4.8, -9)
     complexGroup.add(eastSeam1, eastSeam2)
+
+    // East Facade Structural Buttress Columns (Facing Fiber Vault & Parking)
+    for (let bz = -30; bz <= 12; bz += 7.0) {
+      const buttress = new THREE.Mesh(buttressGeo, steelColumnMat)
+      buttress.position.set(38.65, 3.6, bz)
+      buttress.castShadow = true
+      complexGroup.add(buttress)
+    }
 
     // East facade emergency egress double doors
     const exitDoorGeo = new THREE.BoxGeometry(0.15, 2.6, 1.8)
@@ -596,6 +653,18 @@ export class CampusScene {
     const hallBKneeCap = new THREE.Mesh(new THREE.BoxGeometry(18.2, 0.25, 1.2), parapetCapMat)
     hallBKneeCap.position.set(21, 2.25, 14)
     complexGroup.add(hallBKnee, hallBKneeCap)
+
+    // High-visibility safety hazard kickplates along knee walls
+    const kickplateMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.4,
+      metalness: 0.6,
+    })
+    const kickA = new THREE.Mesh(new THREE.BoxGeometry(19.0, 0.2, 0.08), kickplateMat)
+    kickA.position.set(-9.5, 0.1, 14.52)
+    const kickB = new THREE.Mesh(new THREE.BoxGeometry(18.0, 0.2, 0.08), kickplateMat)
+    kickB.position.set(21, 0.1, 14.52)
+    complexGroup.add(kickA, kickB)
 
     // Segment 5: East Wing South Wall (Connecting to Loading Dock): X: 30 to 38
     const southEastGeo = new THREE.BoxGeometry(8, 7.2, 1.2)
@@ -1677,6 +1746,27 @@ export class CampusScene {
       dockGroup.add(shutter)
     }
 
+    // Heavy Rubber Dock Bumpers on each bay door
+    const bumperGeo = new THREE.BoxGeometry(0.28, 0.65, 0.22)
+    const bumperMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 })
+    for (let i = 0; i < 5; i++) {
+      const bx = -6.4 + i * 3.2
+      const bL = new THREE.Mesh(bumperGeo, bumperMat)
+      bL.position.set(bx - 1.15, 0.45, 2.55)
+      const bR = new THREE.Mesh(bumperGeo, bumperMat)
+      bR.position.set(bx + 1.15, 0.45, 2.55)
+      dockGroup.add(bL, bR)
+    }
+
+    // Overhead Cantilever Loading Dock Weather Canopy
+    const dockCanopyGeo = new THREE.BoxGeometry(17.4, 0.25, 2.8)
+    const dockCanopy = new THREE.Mesh(
+      dockCanopyGeo,
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.3 })
+    )
+    dockCanopy.position.set(0, 4.4, 3.6)
+    dockGroup.add(dockCanopy)
+
     // Second Delivery Box Truck (Parked at Bay 4, Matching IMAGE 2)
     const boxTruckGroup = new THREE.Group()
     boxTruckGroup.position.set(3.2, 0, 5.5)
@@ -2158,7 +2248,7 @@ export class CampusScene {
       this.jumpToCinematicWaypoint(0)
     } else {
       // Return to default elevated 3/4 perspective matching reference
-      this.transitionTo(new THREE.Vector3(-21, 40, 46), new THREE.Vector3(4, 2.5, -7))
+      this.transitionTo(new THREE.Vector3(-10, 48, 56), new THREE.Vector3(5, 2.5, -9))
     }
   }
 

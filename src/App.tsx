@@ -24,7 +24,28 @@ const CorelineDashboard: React.FC = () => {
     isPanelsCollapsed,
     togglePanelsCollapsed,
     isCinematic,
+    toggleCinematic,
   } = useSimulation()
+
+  // Global Keyboard Shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+      if (e.key === 'c' || e.key === 'C') {
+        if (!isSearchOpen && !isSettingsOpen) {
+          toggleCinematic()
+        }
+      } else if (e.key === 'h' || e.key === 'H') {
+        if (!isCinematic && !isSearchOpen && !isSettingsOpen) {
+          togglePanelsCollapsed()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [toggleCinematic, togglePanelsCollapsed, isCinematic, isSearchOpen, isSettingsOpen])
 
   const activeIncidents = incidents.filter((i) => i.status !== 'Resolved')
   const showHud = !isPanelsCollapsed && !isCinematic
@@ -99,7 +120,7 @@ const CorelineDashboard: React.FC = () => {
           className="fixed bottom-6 right-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-cyan-300 font-mono text-xs font-semibold border border-cyan-500/40 shadow-[0_4px_24px_rgba(0,0,0,0.7)] backdrop-blur-md cursor-pointer transition-all hover:scale-105"
         >
           <Maximize2 className="w-4 h-4 text-cyan-400" />
-          <span>Expand Operations HUD</span>
+          <span>Restore Operations Dashboard (H)</span>
         </button>
       )}
 
