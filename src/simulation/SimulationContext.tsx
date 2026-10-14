@@ -50,6 +50,18 @@ interface SimulationContextType {
   setIsHeatOverlay: (h: boolean) => void
   toggleHeatOverlay: () => void
 
+  // Presentation & Overlay Controls (Phase 4 Showcase & Clean View)
+  showFacilityBadges: boolean
+  setShowFacilityBadges: (v: boolean) => void
+  toggleFacilityBadges: () => void
+  isPanelsCollapsed: boolean
+  setIsPanelsCollapsed: (v: boolean) => void
+  togglePanelsCollapsed: () => void
+  cinematicWaypointIndex: number
+  setCinematicWaypointIndex: (idx: number) => void
+  isCinematicPaused: boolean
+  toggleCinematicPause: () => void
+
   // Camera Focus Target for smooth 3D interpolation
   cameraFocus: {
     target: [number, number, number]
@@ -98,6 +110,22 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isCinematic, setIsCinematic] = useState<boolean>(false)
   const [isHeatOverlay, setIsHeatOverlay] = useState<boolean>(false)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false)
+  const [showFacilityBadges, setShowFacilityBadges] = useState<boolean>(true)
+  const [isPanelsCollapsed, setIsPanelsCollapsed] = useState<boolean>(false)
+  const [cinematicWaypointIndex, setCinematicWaypointIndex] = useState<number>(0)
+  const [isCinematicPaused, setIsCinematicPaused] = useState<boolean>(false)
+
+  const toggleFacilityBadges = useCallback(() => {
+    setShowFacilityBadges((prev) => !prev)
+  }, [])
+
+  const togglePanelsCollapsed = useCallback(() => {
+    setIsPanelsCollapsed((prev) => !prev)
+  }, [])
+
+  const toggleCinematicPause = useCallback(() => {
+    setIsCinematicPaused((prev) => !prev)
+  }, [])
 
   // Camera focus trigger
   const [cameraFocus, setCameraFocus] = useState<{
@@ -570,6 +598,16 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isHeatOverlay,
         setIsHeatOverlay,
         toggleHeatOverlay,
+        showFacilityBadges,
+        setShowFacilityBadges,
+        toggleFacilityBadges,
+        isPanelsCollapsed,
+        setIsPanelsCollapsed,
+        togglePanelsCollapsed,
+        cinematicWaypointIndex,
+        setCinematicWaypointIndex,
+        isCinematicPaused,
+        toggleCinematicPause,
         cameraFocus,
         focusOnPosition,
         racks,

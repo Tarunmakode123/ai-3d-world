@@ -29,6 +29,10 @@ export const CorelineCanvas: React.FC = () => {
     dayNight,
     isHeatOverlay,
     isCinematic,
+    showFacilityBadges,
+    cinematicWaypointIndex,
+    setCinematicWaypointIndex,
+    isCinematicPaused,
     cameraFocus,
     selectedObject,
     setSelectedObject,
@@ -61,6 +65,9 @@ export const CorelineCanvas: React.FC = () => {
         onHoverObject: (name: string | null) => {
           setHoveredName(name)
         },
+        onCinematicWaypointChange: (idx: number) => {
+          setCinematicWaypointIndex(idx)
+        },
       })
 
       sceneInstanceRef.current = scene
@@ -73,7 +80,7 @@ export const CorelineCanvas: React.FC = () => {
       console.error('Coreline Three.js Init Error:', err)
       setWebglError(err instanceof Error ? err.message : 'Unknown 3D engine initialization error')
     }
-  }, [setSelectedObject])
+  }, [setSelectedObject, setCinematicWaypointIndex])
 
   // Sync Weather
   useEffect(() => {
@@ -102,6 +109,20 @@ export const CorelineCanvas: React.FC = () => {
       sceneInstanceRef.current.setCinematic(isCinematic)
     }
   }, [isCinematic])
+
+  // Sync Cinematic Waypoint selection from UI
+  useEffect(() => {
+    if (sceneInstanceRef.current && isCinematic) {
+      sceneInstanceRef.current.jumpToCinematicWaypoint(cinematicWaypointIndex)
+    }
+  }, [cinematicWaypointIndex, isCinematic])
+
+  // Sync Cinematic Pause state
+  useEffect(() => {
+    if (sceneInstanceRef.current) {
+      sceneInstanceRef.current.setCinematicPaused(isCinematicPaused)
+    }
+  }, [isCinematicPaused])
 
   // Sync Rack LED Telemetry
   useEffect(() => {
@@ -216,6 +237,7 @@ export const CorelineCanvas: React.FC = () => {
 
       {/* Floating In-World Holographic Badges (Matching IMAGE 2!) */}
       {!isCinematic &&
+        showFacilityBadges &&
         inWorldBadges.map((badge) => {
           const screenPos = badgeScreenPositions.find((p) => p.id === badge.id)
           if (!screenPos || !screenPos.visible) return null

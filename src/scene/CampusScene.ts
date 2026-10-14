@@ -10,6 +10,7 @@ import type {
 export interface SceneCallbacks {
   onSelectObject: (obj: SelectedObject | null) => void
   onHoverObject?: (name: string | null) => void
+  onCinematicWaypointChange?: (index: number) => void
 }
 
 export class CampusScene {
@@ -72,15 +73,16 @@ export class CampusScene {
 
   // Cinematic Tour State (Traversing viewpoints matching reference)
   private isCinematic: boolean = false
+  private isCinematicPaused: boolean = false
   private cinematicWaypointIndex: number = 0
   private cinematicTimer: number = 0
-  private cinematicWaypoints = [
-    { pos: new THREE.Vector3(-24, 36, 48), target: new THREE.Vector3(3, 3, -6), duration: 8 },
-    { pos: new THREE.Vector3(-14, 20, 14), target: new THREE.Vector3(-11, 3, -9), duration: 7 }, // Hall A close-up
-    { pos: new THREE.Vector3(14, 20, 8), target: new THREE.Vector3(23, 3, -9), duration: 7 },  // Hall B close-up
-    { pos: new THREE.Vector3(-36, 20, -10), target: new THREE.Vector3(-28, 4, -26), duration: 6 }, // Cooling
-    { pos: new THREE.Vector3(-46, 18, 14), target: new THREE.Vector3(-38, 3, 10), duration: 6 }, // Power & Tanks
-    { pos: new THREE.Vector3(26, 20, -12), target: new THREE.Vector3(28, 4, -28), duration: 6 }, // Fibre Vault
+  public cinematicWaypoints = [
+    { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-21, 40, 46), target: new THREE.Vector3(4, 2.5, -7), duration: 9 },
+    { name: 'Hall A // Foundation Training Cluster', pos: new THREE.Vector3(-12, 16, 8), target: new THREE.Vector3(-11, 2.5, -9), duration: 7 },
+    { name: 'Hall B // Inference & MoE Swarm', pos: new THREE.Vector3(16, 16, 4), target: new THREE.Vector3(23, 2.5, -9), duration: 7 },
+    { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
+    { name: 'Power Substation & Fuel Reserve', pos: new THREE.Vector3(-42, 16, 16), target: new THREE.Vector3(-38, 3, 12), duration: 6 },
+    { name: 'Network Vault & Optical Loop', pos: new THREE.Vector3(26, 16, -10), target: new THREE.Vector3(28, 3.5, -28), duration: 6 },
   ]
 
   // Environmental state
@@ -106,8 +108,8 @@ export class CampusScene {
     // 2. Camera: Elevated diagonal 3/4 aerial view matching IMAGE 2
     // Positioned and angled to reveal the open server halls, cooling yard, and power infrastructure
     const aspect = container.clientWidth / container.clientHeight
-    this.camera = new THREE.PerspectiveCamera(37, aspect, 0.5, 450)
-    this.camera.position.set(-24, 36, 48)
+    this.camera = new THREE.PerspectiveCamera(38, aspect, 0.5, 450)
+    this.camera.position.set(-21, 40, 46)
 
     // 3. Renderer with full sRGB color space & balanced tone mapping
     this.renderer = new THREE.WebGLRenderer({
@@ -131,7 +133,7 @@ export class CampusScene {
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05
     this.controls.minDistance = 10
     this.controls.maxDistance = 150
-    this.controls.target.set(3, 3, -6)
+    this.controls.target.set(4, 2.5, -7)
 
     // 5. Lighting Setup (Rich nocturnal industrial lighting matching IMAGE 2)
     this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.4)
@@ -141,29 +143,29 @@ export class CampusScene {
     this.scene.add(this.hemiLight)
 
     // Key Light from upper right front (soft warm white moonlight)
-    this.dirLight = new THREE.DirectionalLight(0xf1f5f9, 2.2)
-    this.dirLight.position.set(45, 60, 40)
+    this.dirLight = new THREE.DirectionalLight(0xf8fafc, 2.3)
+    this.dirLight.position.set(48, 65, 42)
     this.dirLight.castShadow = true
     this.dirLight.shadow.mapSize.width = 2048
     this.dirLight.shadow.mapSize.height = 2048
     this.dirLight.shadow.camera.near = 10
     this.dirLight.shadow.camera.far = 190
-    const shadowD = 75
+    const shadowD = 68
     this.dirLight.shadow.camera.left = -shadowD
     this.dirLight.shadow.camera.right = shadowD
     this.dirLight.shadow.camera.top = shadowD
     this.dirLight.shadow.camera.bottom = -shadowD
-    this.dirLight.shadow.bias = -0.0003
+    this.dirLight.shadow.bias = -0.00015
     this.scene.add(this.dirLight)
 
     // Secondary Fill Light from upper left front (cool slate blue)
-    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.3)
-    this.fillLight.position.set(-50, 45, 25)
+    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.2)
+    this.fillLight.position.set(-48, 42, 28)
     this.scene.add(this.fillLight)
 
     // Rim Light from rear top for crisp silhouettes
-    this.rimLight = new THREE.DirectionalLight(0x22d3ee, 1.4)
-    this.rimLight.position.set(12, 40, -65)
+    this.rimLight = new THREE.DirectionalLight(0x22d3ee, 1.3)
+    this.rimLight.position.set(12, 38, -60)
     this.scene.add(this.rimLight)
 
     // 6. Build the Entire Redesigned Industrial Campus World
@@ -337,6 +339,12 @@ export class CampusScene {
       [-66, 0, -34], [-68, 0, -18], [-67, 0, 0], [-68, 0, 18], [-66, 0, 34], [-64, 0, 50],
       // Right Perimeter Grove
       [66, 0, -34], [67, 0, -18], [66, 0, 0], [68, 0, 18], [67, 0, 34], [64, 0, 50],
+      // Front Entrance & Roadway Landscaping Groves (Directly matching IMAGE 2)
+      [-18, 0, 20], [-14, 0, 22], [-8, 0, 21], [14, 0, 21], [22, 0, 20], [25, 0, 22],
+      // Parking Buffer Green Belt
+      [32, 0, 14], [35, 0, 16], [54, 0, 14], [56, 0, 24], [55, 0, 32],
+      // Fuel & Power Facility Landscaping Buffer
+      [-36, 0, 16], [-38, 0, 32], [-20, 0, 34],
       // Front Perimeter Belt
       [-56, 0, 54], [-38, 0, 56], [-20, 0, 54], [4, 0, 56], [26, 0, 54], [46, 0, 56],
     ]
@@ -535,6 +543,18 @@ export class CampusScene {
     glassCurtain.position.set(6, 2.6, 14.1)
     complexGroup.add(glassCurtain)
 
+    // Structural Bronze/Graphite Window Mullions
+    const mullionMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.3 })
+    const vMullionGeo = new THREE.BoxGeometry(0.12, 4.5, 0.26)
+    for (let mx = 3.5; mx <= 8.5; mx += 2.5) {
+      const vMull = new THREE.Mesh(vMullionGeo, mullionMat)
+      vMull.position.set(mx, 2.6, 14.1)
+      complexGroup.add(vMull)
+    }
+    const hMull = new THREE.Mesh(new THREE.BoxGeometry(8, 0.12, 0.26), mullionMat)
+    hMull.position.set(6, 2.6, 14.1)
+    complexGroup.add(hMull)
+
     // Modern Cantilever Entrance Canopy
     const canopyGeo = new THREE.BoxGeometry(10, 0.35, 3.5)
     const entranceCanopy = new THREE.Mesh(canopyGeo, parapetCapMat)
@@ -572,6 +592,12 @@ export class CampusScene {
     const southEast = new THREE.Mesh(southEastGeo, wallPanelMat)
     southEast.position.set(34, 3.6, 14)
     complexGroup.add(southEast)
+
+    // Luminous Illuminated "CORELINE" Signage on Right Wing Facade (Directly matching IMAGE 2!)
+    const rightLogoGeo = new THREE.BoxGeometry(7.5, 1.8, 0.3)
+    const rightLogo = new THREE.Mesh(rightLogoGeo, logoBadgeMat)
+    rightLogo.position.set(34, 5.2, 14.2)
+    complexGroup.add(rightLogo)
 
     // -------------------------------------------------------------
     // 2. CENTRAL DIVIDING SPINE & SERVICE CORRIDOR (Separates Hall A & B)
@@ -1623,6 +1649,20 @@ export class CampusScene {
       dockGroup.add(shutter)
     }
 
+    // Second Delivery Box Truck (Parked at Bay 4, Matching IMAGE 2)
+    const boxTruckGroup = new THREE.Group()
+    boxTruckGroup.position.set(3.2, 0, 5.5)
+    boxTruckGroup.rotation.y = -Math.PI / 12
+
+    const bCab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 2.4), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 }))
+    bCab.position.set(0, 1.1, 2.2)
+    bCab.castShadow = true
+    const bBox = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.6, 5.4), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.5, roughness: 0.3 }))
+    bBox.position.set(0, 1.5, -1.4)
+    bBox.castShadow = true
+    boxTruckGroup.add(bCab, bBox)
+    dockGroup.add(boxTruckGroup)
+
     this.scene.add(dockGroup)
 
     // 2. Solar Canopy Covered Parking Facility (124 / 200 Occupied, Matching IMAGE 2)
@@ -1638,6 +1678,19 @@ export class CampusScene {
     parkingPad.userData = { id: 'parking-lot', name: 'Parking Facility (124 / 200 Occupied)', type: 'parking' }
     parkingGroup.add(parkingPad)
     this.interactiveMeshes.push(parkingPad)
+
+    // Painted White Parking Stall Lines (Directly matching IMAGE 2)
+    const stallLineGeo = new THREE.PlaneGeometry(0.12, 4.8)
+    const stallLineMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+    for (let sx = -13; sx <= 13; sx += 2.6) {
+      const line1 = new THREE.Mesh(stallLineGeo, stallLineMat)
+      line1.rotation.x = -Math.PI / 2
+      line1.position.set(sx, 0.035, -4)
+      const line2 = new THREE.Mesh(stallLineGeo, stallLineMat)
+      line2.rotation.x = -Math.PI / 2
+      line2.position.set(sx, 0.035, 4)
+      parkingGroup.add(line1, line2)
+    }
 
     // Solar Canopies (Blue Solar Panels on Steel Posts)
     const canopyPostGeo = new THREE.CylinderGeometry(0.12, 0.12, 3.4, 6)
@@ -1704,11 +1757,22 @@ export class CampusScene {
     greenLed.position.set(0, 3.8, 3.2)
     gateGroup.add(greenLed)
 
+    // Red & White Striped Security Access Boom Barrier Arm
+    const boomPost = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({ color: 0xf59e0b }))
+    boomPost.position.set(3.5, 0.6, 1.5)
+    const boomArm = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 4.2, 8),
+      new THREE.MeshStandardMaterial({ color: 0xef4444 })
+    )
+    boomArm.rotation.z = Math.PI / 2
+    boomArm.position.set(1.4, 1.1, 1.5)
+    gateGroup.add(boomPost, boomArm)
+
     this.scene.add(gateGroup)
 
-    // 4. Logistics Delivery Semi-Truck
+    // 4. Logistics Delivery Semi-Truck (Backed into Bay 2)
     this.truckGroup = new THREE.Group()
-    this.truckGroup.position.set(22, 1.2, 18)
+    this.truckGroup.position.set(18, 1.2, 17)
     this.truckGroup.rotation.y = -Math.PI / 6
 
     const cabGeo = new THREE.BoxGeometry(2.4, 2.2, 3.2)
@@ -1724,6 +1788,10 @@ export class CampusScene {
     trailer.position.set(0, 1.1, -1.8)
     trailer.castShadow = true
     this.truckGroup.add(trailer)
+
+    this.truckGroup.userData = { id: 'VEH-TRUCK-01', name: 'Heavy Delivery Rig 404', type: 'vehicle' }
+    this.interactiveMeshes.push(trailer)
+    this.scene.add(this.truckGroup)
 
     this.truckGroup.userData = { id: 'VEH-TRUCK-01', name: 'Heavy Delivery Rig 404', type: 'vehicle' }
     this.interactiveMeshes.push(trailer)
@@ -1967,6 +2035,27 @@ export class CampusScene {
     this.camLerpProgress = 0.0
   }
 
+  public transitionTo(pos: THREE.Vector3, target: THREE.Vector3) {
+    this.isCameraTransitioning = true
+    this.camStartPos.copy(this.camera.position)
+    this.camStartLook.copy(this.controls.target)
+    this.camEndPos.copy(pos)
+    this.camEndLook.copy(target)
+    this.camLerpProgress = 0.0
+  }
+
+  public jumpToCinematicWaypoint(index: number) {
+    if (index < 0 || index >= this.cinematicWaypoints.length) return
+    this.cinematicWaypointIndex = index
+    this.cinematicTimer = 0
+    const wp = this.cinematicWaypoints[index]
+    this.transitionTo(wp.pos, wp.target)
+  }
+
+  public setCinematicPaused(paused: boolean) {
+    this.isCinematicPaused = paused
+  }
+
   // ==========================================
   // WEATHER & DAY/NIGHT CONTROLS
   // ==========================================
@@ -2041,6 +2130,10 @@ export class CampusScene {
     if (active) {
       this.cinematicWaypointIndex = 0
       this.cinematicTimer = 0
+      this.jumpToCinematicWaypoint(0)
+    } else {
+      // Return to default elevated 3/4 perspective matching reference
+      this.transitionTo(new THREE.Vector3(-21, 40, 46), new THREE.Vector3(4, 2.5, -7))
     }
   }
 
@@ -2162,18 +2255,20 @@ export class CampusScene {
 
     // 9. Cinematic Auto-Tour Mode
     if (this.isCinematic && !this.isCameraTransitioning) {
-      this.cinematicTimer += delta
-      const currentWp = this.cinematicWaypoints[this.cinematicWaypointIndex]
+      if (!this.isCinematicPaused) {
+        this.cinematicTimer += delta
+        const currentWp = this.cinematicWaypoints[this.cinematicWaypointIndex]
 
-      if (this.cinematicTimer >= currentWp.duration) {
-        this.cinematicTimer = 0
-        this.cinematicWaypointIndex = (this.cinematicWaypointIndex + 1) % this.cinematicWaypoints.length
-        const nextWp = this.cinematicWaypoints[this.cinematicWaypointIndex]
-        this.focusCameraOn(nextWp.target, 24)
-      } else {
-        this.camera.position.x += Math.sin(elapsedTime * 0.15) * 0.03
-        this.camera.position.z += Math.cos(elapsedTime * 0.15) * 0.03
+        if (this.cinematicTimer >= currentWp.duration) {
+          const nextIndex = (this.cinematicWaypointIndex + 1) % this.cinematicWaypoints.length
+          this.jumpToCinematicWaypoint(nextIndex)
+          if (this.callbacks.onCinematicWaypointChange) {
+            this.callbacks.onCinematicWaypointChange(nextIndex)
+          }
+        }
       }
+      this.camera.position.x += Math.sin(elapsedTime * 0.15) * 0.02
+      this.camera.position.z += Math.cos(elapsedTime * 0.15) * 0.02
     }
 
     this.controls.update()

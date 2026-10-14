@@ -17,6 +17,10 @@ import {
   Info,
   AlertTriangle,
   ChevronDown,
+  Eye,
+  EyeOff,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 
 interface TopNavProps {
@@ -37,6 +41,10 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenSearch, onOpenInfo }) => {
     soundEnabled,
     toggleSound,
     incidents,
+    showFacilityBadges,
+    toggleFacilityBadges,
+    isPanelsCollapsed,
+    togglePanelsCollapsed,
   } = useSimulation()
 
   const [timeString, setTimeString] = useState<string>('Mon, 12 May 2025 20:24:17')
@@ -231,6 +239,32 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenSearch, onOpenInfo }) => {
 
           {/* Quick Utility Icon Group */}
           <div className="flex items-center gap-1 pl-1">
+            {/* Facility Badges In-World Toggle */}
+            <button
+              onClick={toggleFacilityBadges}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                showFacilityBadges
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40'
+                  : 'bg-slate-900/70 border-slate-800 text-slate-500 hover:text-slate-200'
+              }`}
+              title={showFacilityBadges ? 'Hide Facility Labels' : 'Show Facility Labels'}
+            >
+              {showFacilityBadges ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-slate-500" />}
+            </button>
+
+            {/* Collapse / Expand UI HUD Panels (Clean 3D View) */}
+            <button
+              onClick={togglePanelsCollapsed}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isPanelsCollapsed
+                  ? 'bg-cyan-500/30 text-cyan-300 border-cyan-400/50'
+                  : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+              title={isPanelsCollapsed ? 'Show Operations HUD' : 'Collapse HUD (Clean View)'}
+            >
+              {isPanelsCollapsed ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+            </button>
+
             {/* Heat Overlay Toggle */}
             <button
               onClick={toggleHeatOverlay}
