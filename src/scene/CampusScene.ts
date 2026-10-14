@@ -75,12 +75,12 @@ export class CampusScene {
   private cinematicWaypointIndex: number = 0
   private cinematicTimer: number = 0
   private cinematicWaypoints = [
-    { pos: new THREE.Vector3(-38, 52, 68), target: new THREE.Vector3(4, 3, -4), duration: 8 },
-    { pos: new THREE.Vector3(-16, 24, 18), target: new THREE.Vector3(-6, 3, -4), duration: 7 }, // Hall A
-    { pos: new THREE.Vector3(12, 24, 12), target: new THREE.Vector3(18, 3, -14), duration: 7 }, // Hall B
-    { pos: new THREE.Vector3(-36, 20, -12), target: new THREE.Vector3(-28, 4, -26), duration: 6 }, // Cooling
-    { pos: new THREE.Vector3(-46, 18, 12), target: new THREE.Vector3(-38, 3, 10), duration: 6 }, // Power & Tanks
-    { pos: new THREE.Vector3(24, 20, -14), target: new THREE.Vector3(30, 4, -26), duration: 6 }, // Fibre Vault
+    { pos: new THREE.Vector3(-22, 34, 46), target: new THREE.Vector3(4, 3, -6), duration: 8 },
+    { pos: new THREE.Vector3(-12, 18, 12), target: new THREE.Vector3(-8, 3, -4), duration: 7 }, // Hall A close-up
+    { pos: new THREE.Vector3(12, 18, 6), target: new THREE.Vector3(18, 3, -14), duration: 7 },  // Hall B close-up
+    { pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -26), duration: 6 }, // Cooling
+    { pos: new THREE.Vector3(-44, 16, 12), target: new THREE.Vector3(-38, 3, 10), duration: 6 }, // Power & Tanks
+    { pos: new THREE.Vector3(24, 18, -14), target: new THREE.Vector3(30, 4, -26), duration: 6 }, // Fibre Vault
   ]
 
   // Environmental state
@@ -101,12 +101,13 @@ export class CampusScene {
     // 1. Scene setup
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x060f1b)
-    this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0024)
+    this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0022)
 
     // 2. Camera: Elevated diagonal 3/4 aerial view matching IMAGE 2
+    // Positioned closer and angled to reveal the open server halls clearly
     const aspect = container.clientWidth / container.clientHeight
-    this.camera = new THREE.PerspectiveCamera(36, aspect, 0.5, 450)
-    this.camera.position.set(-38, 52, 68)
+    this.camera = new THREE.PerspectiveCamera(38, aspect, 0.5, 450)
+    this.camera.position.set(-22, 34, 46)
 
     // 3. Renderer with full sRGB color space & balanced tone mapping
     this.renderer = new THREE.WebGLRenderer({
@@ -128,9 +129,9 @@ export class CampusScene {
     this.controls.enableDamping = true
     this.controls.dampingFactor = 0.06
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05
-    this.controls.minDistance = 12
-    this.controls.maxDistance = 160
-    this.controls.target.set(4, 3, -4)
+    this.controls.minDistance = 10
+    this.controls.maxDistance = 150
+    this.controls.target.set(4, 3, -6)
 
     // 5. Lighting Setup (Rich nocturnal industrial lighting matching IMAGE 2)
     this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.4)
@@ -147,7 +148,7 @@ export class CampusScene {
     this.dirLight.shadow.mapSize.height = 2048
     this.dirLight.shadow.camera.near = 10
     this.dirLight.shadow.camera.far = 190
-    const shadowD = 80
+    const shadowD = 75
     this.dirLight.shadow.camera.left = -shadowD
     this.dirLight.shadow.camera.right = shadowD
     this.dirLight.shadow.camera.top = shadowD
@@ -156,7 +157,7 @@ export class CampusScene {
     this.scene.add(this.dirLight)
 
     // Secondary Fill Light from upper left front (cool slate blue)
-    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.2)
+    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.3)
     this.fillLight.position.set(-50, 45, 25)
     this.scene.add(this.fillLight)
 
@@ -354,152 +355,230 @@ export class CampusScene {
   }
 
   // ==========================================
-  // MAIN DATA CENTRE COMPLEX (HALL A & HALL B)
+  // MAIN DATA CENTRE COMPLEX (TRUE ARCHITECTURAL CUTAWAYS)
   // ==========================================
   private buildDataCenterComplex() {
     const complexGroup = new THREE.Group()
 
-    // 1. Unified Main Building Foundation & Walls (Matching the colossal building in IMAGE 2)
-    // Footprint: Width 62, Height 7.2, Depth 46, Centered around X: 6, Z: -9
-    const buildingWidth = 62
-    const buildingDepth = 46
-    const buildingHeight = 7.2
-
-    const buildingMat = new THREE.MeshStandardMaterial({
-      color: 0x1e2733, // dark slate/charcoal architectural composite panels
-      roughness: 0.45,
-      metalness: 0.5,
+    // Palette for realistic industrial architecture
+    const wallPanelMat = new THREE.MeshStandardMaterial({
+      color: 0x1b2430, // dark charcoal architectural composite panels
+      roughness: 0.5,
+      metalness: 0.45,
     })
 
-    const wallTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      roughness: 0.4,
-      metalness: 0.6,
+
+    const parapetCapMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a, // dark graphite roof coping
+      roughness: 0.3,
+      metalness: 0.7,
     })
 
-    // Outer Perimeter Solid Walls with Parapets
-    const outerWallsGeo = new THREE.BoxGeometry(buildingWidth, buildingHeight, buildingDepth)
-    const outerWalls = new THREE.Mesh(outerWallsGeo, buildingMat)
-    outerWalls.position.set(6, buildingHeight / 2, -9)
-    outerWalls.receiveShadow = true
-    outerWalls.castShadow = true
-    complexGroup.add(outerWalls)
-
-    // Architectural Vertical Mullions / Fins along Facades
-    const finGeo = new THREE.BoxGeometry(0.25, buildingHeight, 0.45)
-    for (let x = -22; x <= 34; x += 4) {
-      const finSouth = new THREE.Mesh(finGeo, wallTrimMat)
-      finSouth.position.set(x, buildingHeight / 2, 14.1)
-      const finNorth = new THREE.Mesh(finGeo, wallTrimMat)
-      finNorth.position.set(x, buildingHeight / 2, -32.1)
-      complexGroup.add(finSouth, finNorth)
-    }
-
-    // Rooftop Louvered Parapets & Industrial HVAC Units
-    const roofHvacGeo = new THREE.BoxGeometry(4.8, 2.0, 3.4)
-    const roofHvacMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 })
-    const hvacPositions = [
-      [-20, 8.0, -28], [-8, 8.0, -28], [4, 8.0, -28], [20, 8.0, -28],
-      [-22, 8.0, 10], [26, 8.0, 10],
-    ]
-    hvacPositions.forEach(([hx, hy, hz]) => {
-      const hvac = new THREE.Mesh(roofHvacGeo, roofHvacMat)
-      hvac.position.set(hx, hy, hz)
-      hvac.castShadow = true
-      complexGroup.add(hvac)
+    const raisedFloorMat = new THREE.MeshStandardMaterial({
+      color: 0x111c28, // computer access floor tiles
+      roughness: 0.3,
+      metalness: 0.65,
     })
 
-    // Illuminated "CORELINE" Corporate Logo on South Facade (As seen in IMAGE 2!)
-    const logoBadgeGeo = new THREE.BoxGeometry(11, 2.4, 0.4)
+    // -------------------------------------------------------------
+    // 1. EXTERIOR PERIMETER WALLS (NO ROOF BLOCKING THE INTERIORS!)
+    // -------------------------------------------------------------
+    // NORTH EXTERIOR WALL (Rear solid facade)
+    // Spans from X: -26 to +38 (Width 64m, Height 7.2m, Thickness 1.2m) at Z: -32
+    const northWallGeo = new THREE.BoxGeometry(64, 7.2, 1.2)
+    const northWall = new THREE.Mesh(northWallGeo, wallPanelMat)
+    northWall.position.set(6, 3.6, -32)
+    northWall.castShadow = true
+    northWall.receiveShadow = true
+    complexGroup.add(northWall)
+
+    const northCopingGeo = new THREE.BoxGeometry(64.4, 0.4, 1.5)
+    const northCoping = new THREE.Mesh(northCopingGeo, parapetCapMat)
+    northCoping.position.set(6, 7.4, -32)
+    complexGroup.add(northCoping)
+
+    // WEST EXTERIOR WALL (Left solid facade facing cooling yard)
+    // Spans from Z: -32 to +14 (Depth 46m, Height 7.2m, Thickness 1.2m) at X: -26
+    const westWallGeo = new THREE.BoxGeometry(1.2, 7.2, 46)
+    const westWall = new THREE.Mesh(westWallGeo, wallPanelMat)
+    westWall.position.set(-26, 3.6, -9)
+    westWall.castShadow = true
+    westWall.receiveShadow = true
+    complexGroup.add(westWall)
+
+    const westCopingGeo = new THREE.BoxGeometry(1.5, 0.4, 46.4)
+    const westCoping = new THREE.Mesh(westCopingGeo, parapetCapMat)
+    westCoping.position.set(-26, 7.4, -9)
+    complexGroup.add(westCoping)
+
+    // EAST EXTERIOR WALL (Right solid facade facing fiber vault/parking)
+    // Spans from Z: -32 to +14 (Depth 46m, Height 7.2m, Thickness 1.2m) at X: 38
+    const eastWallGeo = new THREE.BoxGeometry(1.2, 7.2, 46)
+    const eastWall = new THREE.Mesh(eastWallGeo, wallPanelMat)
+    eastWall.position.set(38, 3.6, -9)
+    eastWall.castShadow = true
+    eastWall.receiveShadow = true
+    complexGroup.add(eastWall)
+
+    const eastCopingGeo = new THREE.BoxGeometry(1.5, 0.4, 46.4)
+    const eastCoping = new THREE.Mesh(eastCopingGeo, parapetCapMat)
+    eastCoping.position.set(38, 7.4, -9)
+    complexGroup.add(eastCoping)
+
+    // SOUTH FRONT FACADE (Stepped down at the cutaways to expose Hall A and Hall B)
+    // Segment 1: West Wing South Wall (Solid Corner): X: -26 to -19 (Width 7m, Height 7.2m)
+    const southWestGeo = new THREE.BoxGeometry(7, 7.2, 1.2)
+    const southWest = new THREE.Mesh(southWestGeo, wallPanelMat)
+    southWest.position.set(-22.5, 3.6, 14)
+    southWest.castShadow = true
+    complexGroup.add(southWest)
+
+    // Segment 2: Hall A Front Parapet Ledge (Low 2.2m knee wall with steel columns for direct line-of-sight!)
+    const hallAKneeGeo = new THREE.BoxGeometry(19, 2.2, 1.0)
+    const hallAKnee = new THREE.Mesh(hallAKneeGeo, wallPanelMat)
+    hallAKnee.position.set(-9.5, 1.1, 14)
+    complexGroup.add(hallAKnee)
+
+    // Segment 3: Central Entrance Pavilion & Corporate Lobby (X: 0 to 12, Height 7.5m, Width 12m)
+    const entranceGeo = new THREE.BoxGeometry(12, 7.5, 8.0)
+    const entrance = new THREE.Mesh(entranceGeo, wallPanelMat)
+    entrance.position.set(6, 3.75, 10)
+    entrance.castShadow = true
+    entrance.receiveShadow = true
+    complexGroup.add(entrance)
+
+    // Entrance Glass Lobby Curtain Wall (Front face of central pavilion)
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.1,
+      metalness: 0.9,
+      transparent: true,
+      opacity: 0.6,
+    })
+    const glassCurtain = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 0.2), glassMat)
+    glassCurtain.position.set(6, 2.6, 14.1)
+    complexGroup.add(glassCurtain)
+
+    // Entrance Modern Canopy
+    const canopyGeo = new THREE.BoxGeometry(10, 0.35, 3.5)
+    const entranceCanopy = new THREE.Mesh(canopyGeo, parapetCapMat)
+    entranceCanopy.position.set(6, 4.8, 15.5)
+    complexGroup.add(entranceCanopy)
+
+    // Luminous Illuminated "CORELINE" Signage on Entrance Facade (IMAGE 2)
+    const logoBadgeGeo = new THREE.BoxGeometry(8.5, 1.8, 0.3)
     const logoBadgeMat = new THREE.MeshStandardMaterial({
-      color: 0x0b1320,
+      color: 0x07111e,
       emissive: 0x22d3ee,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 0.9,
       roughness: 0.2,
       metalness: 0.9,
     })
     const logoBadge = new THREE.Mesh(logoBadgeGeo, logoBadgeMat)
-    logoBadge.position.set(19, 4.4, 14.2)
+    logoBadge.position.set(6, 6.2, 14.2)
     complexGroup.add(logoBadge)
 
-    // 2. Dual Cutaway Courtyards for HALL A and HALL B
-    // Hall A Interior Floor (Front-Left Cutaway)
-    const hallAFloorGeo = new THREE.PlaneGeometry(26, 22)
-    const hallFloorMat = new THREE.MeshStandardMaterial({
-      color: 0x101b27,
-      roughness: 0.35,
-      metalness: 0.65,
-    })
-    const hallAFloor = new THREE.Mesh(hallAFloorGeo, hallFloorMat)
+    // Segment 4: Hall B Front Parapet Ledge (Low 2.2m knee wall for direct line-of-sight!)
+    const hallBKneeGeo = new THREE.BoxGeometry(18, 2.2, 1.0)
+    const hallBKnee = new THREE.Mesh(hallBKneeGeo, wallPanelMat)
+    hallBKnee.position.set(21, 1.1, 14)
+    complexGroup.add(hallBKnee)
+
+    // Segment 5: East Wing South Wall (Connecting to Loading Dock): X: 30 to 38
+    const southEastGeo = new THREE.BoxGeometry(8, 7.2, 1.2)
+    const southEast = new THREE.Mesh(southEastGeo, wallPanelMat)
+    southEast.position.set(34, 3.6, 14)
+    complexGroup.add(southEast)
+
+    // -------------------------------------------------------------
+    // 2. CENTRAL DIVIDING SPINE & SERVICE CORRIDOR (Separates Hall A & B)
+    // -------------------------------------------------------------
+    // Spine Wall from Z: -32 to +6 (Depth 38m, Width 5m, Height 7.2m) at X: 6
+    const spineGeo = new THREE.BoxGeometry(5, 7.2, 38)
+    const spine = new THREE.Mesh(spineGeo, wallPanelMat)
+    spine.position.set(6, 3.6, -13)
+    spine.castShadow = true
+    spine.receiveShadow = true
+    complexGroup.add(spine)
+
+    // Rooftop HVAC units on top of the solid central spine corridor
+    const roofHvacGeo = new THREE.BoxGeometry(3.6, 1.8, 3.2)
+    const roofHvacMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 })
+    for (let sz = -28; sz <= -2; sz += 8) {
+      const hvac = new THREE.Mesh(roofHvacGeo, roofHvacMat)
+      hvac.position.set(6, 8.1, sz)
+      hvac.castShadow = true
+      complexGroup.add(hvac)
+    }
+
+    // -------------------------------------------------------------
+    // 3. HALL A INTERIOR (COMPLETELY OPEN TOP, VIBRANT CYAN ILLUMINATION)
+    // -------------------------------------------------------------
+    // Raised Access Floor (X: -25 to 3.5, Z: -31 to 13)
+    const hallAFloorGeo = new THREE.PlaneGeometry(28, 44)
+    const hallAFloor = new THREE.Mesh(hallAFloorGeo, raisedFloorMat)
     hallAFloor.rotation.x = -Math.PI / 2
-    hallAFloor.position.set(-6, 0.52, -4)
+    hallAFloor.position.set(-11, 0.15, -9)
     hallAFloor.receiveShadow = true
-    hallAFloor.userData = { id: 'hall-a', name: 'HALL A // FOUNDATION TRAINING', type: 'hall' }
+    hallAFloor.userData = { id: 'hall-a', name: 'HALL A // FOUNDATION TRAINING (NVIDIA H100 SXM5)', type: 'hall' }
     complexGroup.add(hallAFloor)
     this.interactiveMeshes.push(hallAFloor)
 
-    // Hall B Interior Floor (Rear-Right Cutaway)
-    const hallBFloorGeo = new THREE.PlaneGeometry(26, 22)
-    const hallBFloor = new THREE.Mesh(hallBFloorGeo, hallFloorMat)
+    // Exposed Structural Steel Roof Trusses across Hall A opening (X: -26 to 3.5)
+    const trussBeamGeo = new THREE.BoxGeometry(28, 0.45, 0.5)
+    const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85 })
+    const yellowTrayMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85 })
+    const cableTrayGeo = new THREE.BoxGeometry(27, 0.18, 0.5)
+
+    for (let tz = -26; tz <= 8; tz += 6.5) {
+      const truss = new THREE.Mesh(trussBeamGeo, trussMat)
+      truss.position.set(-11, 7.1, tz)
+      const tray = new THREE.Mesh(cableTrayGeo, yellowTrayMat)
+      tray.position.set(-11, 5.4, tz)
+      complexGroup.add(truss, tray)
+    }
+
+    // Hall A Downlights (High-intensity electric cyan & blue downward wash)
+    const hallALight1 = new THREE.PointLight(0x22d3ee, 4.5, 36)
+    hallALight1.position.set(-11, 6.2, -16)
+    const hallALight2 = new THREE.PointLight(0x38bdf8, 4.2, 36)
+    hallALight2.position.set(-11, 6.2, 0)
+    complexGroup.add(hallALight1, hallALight2)
+    this.hallLights.push(hallALight1, hallALight2)
+
+    // -------------------------------------------------------------
+    // 4. HALL B INTERIOR (COMPLETELY OPEN TOP, DUAL AMBER/BLUE CONTRAST)
+    // -------------------------------------------------------------
+    // Raised Access Floor (X: 8.5 to 37, Z: -31 to 13)
+    const hallBFloorGeo = new THREE.PlaneGeometry(28, 44)
+    const hallBFloor = new THREE.Mesh(hallBFloorGeo, raisedFloorMat)
     hallBFloor.rotation.x = -Math.PI / 2
-    hallBFloor.position.set(18, 0.52, -14)
+    hallBFloor.position.set(23, 0.15, -9)
     hallBFloor.receiveShadow = true
-    hallBFloor.userData = { id: 'hall-b', name: 'HALL B // INFERENCE & MOE CLUSTER', type: 'hall' }
+    hallBFloor.userData = { id: 'hall-b', name: 'HALL B // INFERENCE & MOE CLUSTER (B200 NVL / TPU)', type: 'hall' }
     complexGroup.add(hallBFloor)
     this.interactiveMeshes.push(hallBFloor)
 
-    // Interior Structural Steel Columns & Overhead Cable Trays
-    const columnGeo = new THREE.BoxGeometry(0.6, 7.0, 0.6)
-    const beamGeo = new THREE.BoxGeometry(26, 0.4, 0.6)
-    const trayGeo = new THREE.BoxGeometry(24, 0.18, 0.5)
-    const yellowTrayMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85 })
-
-    // Hall A Columns, Beams & Yellow Fiber Trays
-    for (let tz = -11; tz <= 5; tz += 4.5) {
-      const beam = new THREE.Mesh(beamGeo, wallTrimMat)
-      beam.position.set(-6, 7.0, tz)
-      const tray = new THREE.Mesh(trayGeo, yellowTrayMat)
-      tray.position.set(-6, 5.2, tz)
-      complexGroup.add(beam, tray)
-
-      const colLeft = new THREE.Mesh(columnGeo, wallTrimMat)
-      colLeft.position.set(-18.5, 3.5, tz)
-      const colRight = new THREE.Mesh(columnGeo, wallTrimMat)
-      colRight.position.set(6.5, 3.5, tz)
-      complexGroup.add(colLeft, colRight)
+    // Exposed Structural Steel Roof Trusses across Hall B opening (X: 8.5 to 37)
+    for (let tz = -26; tz <= 8; tz += 6.5) {
+      const truss = new THREE.Mesh(trussBeamGeo, trussMat)
+      truss.position.set(23, 7.1, tz)
+      const tray = new THREE.Mesh(cableTrayGeo, yellowTrayMat)
+      tray.position.set(23, 5.4, tz)
+      complexGroup.add(truss, tray)
     }
 
-    // Hall B Columns, Beams & Yellow Fiber Trays
-    for (let tz = -21; tz <= -5; tz += 4.5) {
-      const beam = new THREE.Mesh(beamGeo, wallTrimMat)
-      beam.position.set(18, 7.0, tz)
-      const tray = new THREE.Mesh(trayGeo, yellowTrayMat)
-      tray.position.set(18, 5.2, tz)
-      complexGroup.add(beam, tray)
-
-      const colLeft = new THREE.Mesh(columnGeo, wallTrimMat)
-      colLeft.position.set(5.5, 3.5, tz)
-      const colRight = new THREE.Mesh(columnGeo, wallTrimMat)
-      colRight.position.set(30.5, 3.5, tz)
-      complexGroup.add(colLeft, colRight)
-    }
-
-    // Interior Hall Ambient Downlights
-    // Hall A: Bright Cyan / Electric Blue Downlight
-    const hallALight = new THREE.PointLight(0x22d3ee, 3.8, 34)
-    hallALight.position.set(-6, 6.8, -4)
-    complexGroup.add(hallALight)
-    this.hallLights.push(hallALight)
-
-    // Hall B: Vibrant Amber & Blue Downlight (Matching the dual color aisles in IMAGE 2)
-    const hallBLight = new THREE.PointLight(0x38bdf8, 3.5, 34)
-    hallBLight.position.set(18, 6.8, -14)
-    complexGroup.add(hallBLight)
-    this.hallLights.push(hallBLight)
+    // Hall B Downlights (Dual-Color: Warm Amber Hot Aisle + Cool Blue Compute Node Wash)
+    const hallBLightWarm = new THREE.PointLight(0xf97316, 4.5, 36)
+    hallBLightWarm.position.set(23, 6.2, -16)
+    const hallBLightCool = new THREE.PointLight(0x0284c7, 4.2, 36)
+    hallBLightCool.position.set(23, 6.2, 0)
+    complexGroup.add(hallBLightWarm, hallBLightCool)
+    this.hallLights.push(hallBLightWarm, hallBLightCool)
 
     this.scene.add(complexGroup)
 
-    // Build the 48 Detailed Dense Server Racks inside Hall A and Hall B
+    // Build the dense, highly visible GPU server racks in both open courtyards
     this.buildDenseServerRacks()
   }
 
@@ -507,75 +586,84 @@ export class CampusScene {
   // DENSE HIGH-REALISM GPU SERVER RACKS
   // ==========================================
   private buildDenseServerRacks() {
-    // Highly detailed rack model geometry
-    const rackCabinetGeo = new THREE.BoxGeometry(2.2, 3.6, 1.25)
+    // 42U Heavy Enterprise Server Rack Cabinet
+    const rackCabinetGeo = new THREE.BoxGeometry(2.2, 3.8, 1.3)
     const rackFrameMat = new THREE.MeshStandardMaterial({
-      color: 0x16202c,
-      roughness: 0.35,
-      metalness: 0.55,
+      color: 0x0c131a, // deep matte black chassis
+      roughness: 0.3,
+      metalness: 0.6,
     })
 
-    const serverBladeGeo = new THREE.BoxGeometry(2.05, 0.38, 0.1)
+    const serverBladeGeo = new THREE.BoxGeometry(2.05, 0.38, 0.12)
     const bladeMat = new THREE.MeshStandardMaterial({
-      color: 0x273549,
-      roughness: 0.45,
-      metalness: 0.4,
+      color: 0x1f2937,
+      roughness: 0.4,
+      metalness: 0.45,
     })
 
     const ledGeo = new THREE.SphereGeometry(0.065, 8, 8)
 
-    // Hall A: 24 Racks in 4 dense rows (X: -14 to X: 2, Z: -10 to Z: 3)
-    // Front aisles: Electric Cyan & Blue glow
-    for (let row = 0; row < 4; row++) {
-      // Hot aisle orange floor runner
-      const aisleOrangeGeo = new THREE.PlaneGeometry(19, 0.45)
-      const aisleOrangeMat = new THREE.MeshBasicMaterial({ color: 0xf97316 })
-      const aisleRunner = new THREE.Mesh(aisleOrangeGeo, aisleOrangeMat)
+    // ==========================================
+    // HALL A: 48 RACKS IN 6 DENSE ROWS (8 RACKS PER ROW)
+    // Front to back: Cold Aisle Containment with Electric Cyan Glow
+    // ==========================================
+    const hallARowZs = [-24, -18, -12, -6, 0, 6]
+    hallARowZs.forEach((rowZ, rowIndex) => {
+      // Vibrant Cyan Cold Aisle Floor Runner
+      const aisleRunnerGeo = new THREE.PlaneGeometry(24, 1.2)
+      const aisleRunnerMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 })
+      const aisleRunner = new THREE.Mesh(aisleRunnerGeo, aisleRunnerMat)
       aisleRunner.rotation.x = -Math.PI / 2
-      aisleRunner.position.set(-6, 0.54, -10 + row * 4.2 - 1.6)
+      aisleRunner.position.set(-11, 0.18, rowZ - 1.6)
       this.scene.add(aisleRunner)
 
-      for (let col = 0; col < 6; col++) {
-        const index = row * 6 + col + 1
-        const rackId = `RACK-A-${String(index).padStart(3, '0')}`
-        const posX = -14 + col * 2.8
-        const posZ = -10 + row * 4.2
+      // 8 Racks in this row (from X: -22 to X: -0)
+      for (let col = 0; col < 8; col++) {
+        const rackNumber = rowIndex * 8 + col + 1
+        const rackId = `RACK-A-${String(rackNumber).padStart(3, '0')}`
+        const posX = -22 + col * 3.1
+        const posZ = rowZ
 
         const rackGroup = new THREE.Group()
-        rackGroup.position.set(posX, 1.8 + 0.52, posZ)
+        rackGroup.position.set(posX, 1.9 + 0.15, posZ)
 
         // Outer Cabinet
         const cabinet = new THREE.Mesh(rackCabinetGeo, rackFrameMat)
         cabinet.castShadow = true
         cabinet.receiveShadow = true
-        cabinet.userData = { id: rackId, name: `${rackId} (H100 SXM5 Cluster)`, type: 'rack', hallId: 'hall-a' }
+        cabinet.userData = {
+          id: rackId,
+          name: `${rackId} (NVIDIA H100 SXM5 / 3.2 Tbps NVLink)`,
+          type: 'rack',
+          hallId: 'hall-a',
+        }
         rackGroup.add(cabinet)
         this.interactiveMeshes.push(cabinet)
 
-        // 7 Horizontal Server Units per Rack
+        // 8 Horizontal Server Units per Rack (Visible Blades)
         const rackLeds: THREE.MeshBasicMaterial[] = []
-        for (let b = 0; b < 7; b++) {
+        for (let b = 0; b < 8; b++) {
           const blade = new THREE.Mesh(serverBladeGeo, bladeMat)
-          blade.position.set(0, -1.2 + b * 0.4, 0.6)
+          blade.position.set(0, -1.4 + b * 0.4, 0.62)
           rackGroup.add(blade)
 
-          // 4 Glowing LEDs per unit
+          // 4 Glowing Activity LEDs per unit (Cyan, Green, Blue)
           for (let l = 0; l < 4; l++) {
             const ledMat = new THREE.MeshBasicMaterial({
-              color: l === 1 ? 0x34d399 : l === 2 ? 0x38bdf8 : 0x22d3ee,
+              color: l === 0 ? 0x22d3ee : l === 1 ? 0x34d399 : l === 2 ? 0x38bdf8 : 0x06b6d4,
             })
             const led = new THREE.Mesh(ledGeo, ledMat)
-            led.position.set(-0.75 + l * 0.5, -1.2 + b * 0.4, 0.66)
+            led.position.set(-0.75 + l * 0.5, -1.4 + b * 0.4, 0.68)
             rackGroup.add(led)
             rackLeds.push(ledMat)
           }
         }
 
-        // Top Status Beacon
-        const beaconGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.25, 8)
+        // Top Status Beacon Tower
+        const beaconGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8)
         const beaconMat = new THREE.MeshBasicMaterial({ color: 0x34d399 })
         const beacon = new THREE.Mesh(beaconGeo, beaconMat)
-        beacon.position.set(0, 1.92, 0)
+        beacon.position.set(0, 2.05, 0)
         rackGroup.add(beacon)
         rackLeds.push(beaconMat)
 
@@ -583,62 +671,74 @@ export class CampusScene {
         this.rackMeshMap.set(rackId, rackGroup)
         this.scene.add(rackGroup)
       }
-    }
+    })
 
-    // Hall B: 24 Racks in 4 dense rows (X: 10 to X: 26, Z: -20 to Z: -7)
-    // Rear aisles: Deep Amber & Red Hot Aisles with Blue compute nodes (Matching IMAGE 2)
-    for (let row = 0; row < 4; row++) {
-      // Hot aisle deep red/amber runner
-      const aisleRedGeo = new THREE.PlaneGeometry(19, 0.45)
-      const aisleRedMat = new THREE.MeshBasicMaterial({ color: row % 2 === 0 ? 0xef4444 : 0xf59e0b })
-      const aisleRunner = new THREE.Mesh(aisleRedGeo, aisleRedMat)
+    // ==========================================
+    // HALL B: 48 RACKS IN 6 DENSE ROWS (8 RACKS PER ROW)
+    // Alternating Hot/Cold Aisles (Amber/Red vs Electric Blue matching IMAGE 2)
+    // ==========================================
+    const hallBRowZs = [-24, -18, -12, -6, 0, 6]
+    hallBRowZs.forEach((rowZ, rowIndex) => {
+      // Alternating Hot Aisle (Red/Amber) and Cold Aisle (Blue) Floor Runners
+      const isHotAisle = rowIndex % 2 === 0
+      const aisleRunnerGeo = new THREE.PlaneGeometry(24, 1.2)
+      const aisleRunnerMat = new THREE.MeshBasicMaterial({
+        color: isHotAisle ? 0xef4444 : 0x0284c7,
+      })
+      const aisleRunner = new THREE.Mesh(aisleRunnerGeo, aisleRunnerMat)
       aisleRunner.rotation.x = -Math.PI / 2
-      aisleRunner.position.set(18, 0.54, -20 + row * 4.2 - 1.6)
+      aisleRunner.position.set(23, 0.18, rowZ - 1.6)
       this.scene.add(aisleRunner)
 
-      for (let col = 0; col < 6; col++) {
-        const index = row * 6 + col + 1
-        const rackId = `RACK-B-${String(index).padStart(3, '0')}`
-        const posX = 10 + col * 2.8
-        const posZ = -20 + row * 4.2
+      // 8 Racks in this row (from X: 12 to X: 34)
+      for (let col = 0; col < 8; col++) {
+        const rackNumber = rowIndex * 8 + col + 1
+        const rackId = `RACK-B-${String(rackNumber).padStart(3, '0')}`
+        const posX = 12 + col * 3.1
+        const posZ = rowZ
 
         const rackGroup = new THREE.Group()
-        rackGroup.position.set(posX, 1.8 + 0.52, posZ)
+        rackGroup.position.set(posX, 1.9 + 0.15, posZ)
 
         // Outer Cabinet
         const cabinet = new THREE.Mesh(rackCabinetGeo, rackFrameMat)
         cabinet.castShadow = true
         cabinet.receiveShadow = true
-        cabinet.userData = { id: rackId, name: `${rackId} (B200 NVL / TPU v5p Cluster)`, type: 'rack', hallId: 'hall-b' }
+        cabinet.userData = {
+          id: rackId,
+          name: `${rackId} (NVIDIA B200 NVL / TPU v5p Cluster)`,
+          type: 'rack',
+          hallId: 'hall-b',
+        }
         rackGroup.add(cabinet)
         this.interactiveMeshes.push(cabinet)
 
-        // 7 Server Units
+        // 8 Horizontal Server Units
         const rackLeds: THREE.MeshBasicMaterial[] = []
-        for (let b = 0; b < 7; b++) {
+        for (let b = 0; b < 8; b++) {
           const blade = new THREE.Mesh(serverBladeGeo, bladeMat)
-          blade.position.set(0, -1.2 + b * 0.4, 0.6)
+          blade.position.set(0, -1.4 + b * 0.4, 0.62)
           rackGroup.add(blade)
 
-          // 4 Glowing LEDs (Amber, Blue, Red accents as in IMAGE 2)
+          // 4 Glowing LEDs with Amber/Red hot accents and Blue compute nodes
           for (let l = 0; l < 4; l++) {
             let colHex = 0x38bdf8
-            if (row % 2 === 0) {
+            if (isHotAisle) {
               colHex = l === 0 ? 0xf59e0b : l === 1 ? 0xef4444 : 0x38bdf8
             }
             const ledMat = new THREE.MeshBasicMaterial({ color: colHex })
             const led = new THREE.Mesh(ledGeo, ledMat)
-            led.position.set(-0.75 + l * 0.5, -1.2 + b * 0.4, 0.66)
+            led.position.set(-0.75 + l * 0.5, -1.4 + b * 0.4, 0.68)
             rackGroup.add(led)
             rackLeds.push(ledMat)
           }
         }
 
         // Top Status Beacon
-        const beaconGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.25, 8)
-        const beaconMat = new THREE.MeshBasicMaterial({ color: 0x34d399 })
+        const beaconGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8)
+        const beaconMat = new THREE.MeshBasicMaterial({ color: isHotAisle ? 0xf59e0b : 0x34d399 })
         const beacon = new THREE.Mesh(beaconGeo, beaconMat)
-        beacon.position.set(0, 1.92, 0)
+        beacon.position.set(0, 2.05, 0)
         rackGroup.add(beacon)
         rackLeds.push(beaconMat)
 
@@ -646,9 +746,9 @@ export class CampusScene {
         this.rackMeshMap.set(rackId, rackGroup)
         this.scene.add(rackGroup)
       }
-    }
+    })
 
-    // Heat Overlay Planes
+    // Thermal Heat Overlay Mesh
     this.buildHeatOverlay()
   }
 
@@ -657,7 +757,7 @@ export class CampusScene {
   // ==========================================
   private buildHeatOverlay() {
     this.heatOverlayGroup.visible = false
-    const heatPlaneGeo = new THREE.PlaneGeometry(19, 2.5)
+    const heatPlaneGeo = new THREE.PlaneGeometry(24, 2.8)
 
     const hotAisleMat = new THREE.MeshBasicMaterial({
       color: 0xf87171,
@@ -673,19 +773,19 @@ export class CampusScene {
       side: THREE.DoubleSide,
     })
 
-    // Hall A
-    for (let r = 0; r < 4; r++) {
+    // Hall A Heatmap Planes
+    for (let r = 0; r < 6; r++) {
       const plane = new THREE.Mesh(heatPlaneGeo, r % 2 === 0 ? hotAisleMat : coldAisleMat)
       plane.rotation.x = -Math.PI / 2
-      plane.position.set(-6, 4.4, -10 + r * 4.2)
+      plane.position.set(-11, 4.4, -24 + r * 6.0)
       this.heatOverlayGroup.add(plane)
     }
 
-    // Hall B
-    for (let r = 0; r < 4; r++) {
+    // Hall B Heatmap Planes
+    for (let r = 0; r < 6; r++) {
       const plane = new THREE.Mesh(heatPlaneGeo, r % 2 === 0 ? hotAisleMat : coldAisleMat)
       plane.rotation.x = -Math.PI / 2
-      plane.position.set(18, 4.4, -20 + r * 4.2)
+      plane.position.set(23, 4.4, -24 + r * 6.0)
       this.heatOverlayGroup.add(plane)
     }
 
@@ -1325,7 +1425,7 @@ export class CampusScene {
 
     this.focusCameraOn(
       new THREE.Vector3(obj.position[0], obj.position[1], obj.position[2]),
-      obj.type === 'rack' ? 16 : 24
+      obj.type === 'rack' ? 14 : 22
     )
 
     this.callbacks.onSelectObject(obj)
@@ -1337,16 +1437,16 @@ export class CampusScene {
     this.callbacks.onSelectObject(null)
   }
 
-  public focusCameraOn(targetPos: THREE.Vector3, distance: number = 26) {
+  public focusCameraOn(targetPos: THREE.Vector3, distance: number = 22) {
     this.isCameraTransitioning = true
     this.camStartPos.copy(this.camera.position)
     this.camStartLook.copy(this.controls.target)
 
     // Preserve the elevated 3/4 perspective angle
     this.camEndPos.set(
-      targetPos.x - distance * 0.75,
-      targetPos.y + distance * 0.9,
-      targetPos.z + distance * 0.85
+      targetPos.x - distance * 0.72,
+      targetPos.y + distance * 0.88,
+      targetPos.z + distance * 0.82
     )
     this.camEndLook.copy(targetPos)
     this.camLerpProgress = 0.0
@@ -1363,7 +1463,7 @@ export class CampusScene {
       this.scene.fog = new THREE.FogExp2(0x060f1b, weather === 'storm' ? 0.0045 : 0.0035)
     } else {
       if (this.rainParticles) this.rainParticles.visible = false
-      this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0024)
+      this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0022)
     }
 
     if (weather === 'heatwave') {
@@ -1401,7 +1501,7 @@ export class CampusScene {
       this.renderer.toneMappingExposure = 1.35
     } else {
       this.scene.background = new THREE.Color(0x060f1b)
-      this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0024)
+      this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0022)
       this.ambientLight.color.setHex(0x4a6282)
       this.ambientLight.intensity = 1.4
       this.hemiLight.color.setHex(0x60a5fa)
@@ -1410,7 +1510,7 @@ export class CampusScene {
       this.dirLight.color.setHex(0xf1f5f9)
       this.dirLight.intensity = 2.2
       this.fillLight.color.setHex(0x38bdf8)
-      this.fillLight.intensity = 1.2
+      this.fillLight.intensity = 1.3
       this.rimLight.color.setHex(0x22d3ee)
       this.rimLight.intensity = 1.4
       this.renderer.toneMappingExposure = 1.35
@@ -1554,7 +1654,7 @@ export class CampusScene {
         this.cinematicTimer = 0
         this.cinematicWaypointIndex = (this.cinematicWaypointIndex + 1) % this.cinematicWaypoints.length
         const nextWp = this.cinematicWaypoints[this.cinematicWaypointIndex]
-        this.focusCameraOn(nextWp.target, 28)
+        this.focusCameraOn(nextWp.target, 24)
       } else {
         this.camera.position.x += Math.sin(elapsedTime * 0.15) * 0.03
         this.camera.position.z += Math.cos(elapsedTime * 0.15) * 0.03

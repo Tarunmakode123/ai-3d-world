@@ -77,6 +77,8 @@ export const JobLifecycleTracker: React.FC<JobLifecycleTrackerProps> = ({
     },
   ]
 
+  const [isMinimized, setIsMinimized] = useState<boolean>(false)
+
   const handleRowClick = (stage: JobStage) => {
     if (selectedStageFilter === stage) {
       onSelectStageFilter(null)
@@ -87,43 +89,55 @@ export const JobLifecycleTracker: React.FC<JobLifecycleTrackerProps> = ({
   }
 
   return (
-    <div className="w-full glass-panel rounded-2xl p-4 shadow-2xl pointer-events-auto">
+    <div className="w-full glass-panel rounded-2xl p-3.5 shadow-2xl pointer-events-auto transition-all duration-200">
       {/* Header matching IMAGE 2 */}
-      <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
-        <h4 className="text-xs font-mono font-bold tracking-wider text-slate-300 uppercase">
-          WORKLOAD TRACKER
-        </h4>
+      <div className={`flex items-center justify-between ${isMinimized ? '' : 'pb-2.5 mb-2.5 border-b border-slate-800'}`}>
+        <div className="flex items-center gap-2">
+          <h4 className="text-xs font-mono font-bold tracking-wider text-slate-300 uppercase">
+            WORKLOAD TRACKER
+          </h4>
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-1 rounded text-slate-400 hover:text-white transition-colors cursor-pointer text-[10px] font-mono"
+            title={isMinimized ? 'Expand Tracker' : 'Collapse Tracker'}
+          >
+            {isMinimized ? '[+ Expand]' : '[-]'}
+          </button>
+        </div>
 
         {/* Cluster Filter Dropdown (IMAGE 2: All Clusters ▼) */}
-        <div className="relative">
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800 transition-colors cursor-pointer"
-          >
-            <span>{selectedCluster}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
-          {isDropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl py-1 backdrop-blur-md">
-              {['All Clusters', 'Cluster Alpha', 'Cluster Beta', 'Inference Swarm'].map((c) => (
-                <button
-                  key={c}
-                  onClick={() => {
-                    setSelectedCluster(c)
-                    setIsDropdownOpen(false)
-                  }}
-                  className="w-full text-left px-2.5 py-1 text-[11px] font-mono text-slate-300 hover:bg-slate-800"
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {!isMinimized && (
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800 transition-colors cursor-pointer"
+            >
+              <span>{selectedCluster}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-1 z-50 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl py-1 backdrop-blur-md">
+                {['All Clusters', 'Cluster Alpha', 'Cluster Beta', 'Inference Swarm'].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      setSelectedCluster(c)
+                      setIsDropdownOpen(false)
+                    }}
+                    className="w-full text-left px-2.5 py-1 text-[11px] font-mono text-slate-300 hover:bg-slate-800"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Rows with Horizontal Progress Bars matching IMAGE 2 */}
-      <div className="space-y-2">
+      {!isMinimized && (
+        <div className="space-y-2">
         {workloadItems.map((item) => {
           const isSelected = selectedStageFilter === item.stage
           return (
@@ -149,7 +163,8 @@ export const JobLifecycleTracker: React.FC<JobLifecycleTrackerProps> = ({
             </button>
           )
         })}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
