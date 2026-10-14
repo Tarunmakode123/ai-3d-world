@@ -287,7 +287,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'HALL B',
     subtitle: '64% util',
     status: 'online',
-    position: [16, 11, -14],
+    position: [18, 11, -14],
     type: 'hall',
   },
   {
@@ -327,7 +327,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'FUEL TANKS',
     subtitle: '1,200 m³',
     status: '> 72 hours',
-    position: [-30, 8.5, 26],
+    position: [-28, 8.5, 25],
     type: 'power',
   },
   {
@@ -335,7 +335,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'FIBRE ENTRY VAULT',
     subtitle: '8 × 400G',
     status: 'Live traffic',
-    position: [26, 9.5, -28],
+    position: [28, 9.5, -28],
     type: 'network',
   },
   {
@@ -343,7 +343,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'LOADING DOCK',
     subtitle: '5 bays',
     status: '2 in use',
-    position: [20, 6.5, 10],
+    position: [22, 6.5, 10],
     type: 'dock',
   },
   {
@@ -351,7 +351,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'SECURITY GATE',
     subtitle: 'All clear',
     status: 'All clear',
-    position: [0, 6.0, 28],
+    position: [0, 6.0, 26],
     type: 'gate',
   },
   {
@@ -359,7 +359,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'PARKING',
     subtitle: '124 / 200',
     status: 'Occupied',
-    position: [34, 5.0, 24],
+    position: [40, 6.0, 22],
     type: 'parking',
   },
 ]
