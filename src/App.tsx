@@ -40,23 +40,30 @@ const CorelineDashboard: React.FC = () => {
         if (!isCinematic && !isSearchOpen && !isSettingsOpen) {
           togglePanelsCollapsed()
         }
+      } else if (e.key === 'Escape') {
+        if (isSearchOpen) setIsSearchOpen(false)
+        else if (isSettingsOpen) setIsSettingsOpen(false)
+        else if (isPanelsCollapsed && !isCinematic) {
+          togglePanelsCollapsed()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleCinematic, togglePanelsCollapsed, isCinematic, isSearchOpen, isSettingsOpen])
+  }, [toggleCinematic, togglePanelsCollapsed, isCinematic, isPanelsCollapsed, isSearchOpen, isSettingsOpen])
 
   const activeIncidents = incidents.filter((i) => i.status !== 'Resolved')
+  const isCleanView = isPanelsCollapsed && !isCinematic
   const showHud = !isPanelsCollapsed && !isCinematic
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#07111F] text-[#F1F5F9] font-sans">
       {/* 1. 3D WebGL Canvas Layer (Full viewport) */}
-      <CorelineCanvas />
+      <CorelineCanvas isCleanView={isCleanView} />
 
-      {/* 2. Top Navigation Bar (Always visible or in minimal mode) */}
-      {!isCinematic && (
+      {/* 2. Top Navigation Bar (Hidden during Cinematic Tour and Clean View) */}
+      {!isCinematic && !isCleanView && (
         <TopNav
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenInfo={() => setIsSettingsOpen(true)}
@@ -113,15 +120,18 @@ const CorelineDashboard: React.FC = () => {
         />
       )}
 
-      {/* 7. Floating Expand HUD Button when panels collapsed */}
-      {isPanelsCollapsed && !isCinematic && (
-        <button
-          onClick={togglePanelsCollapsed}
-          className="fixed bottom-6 right-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-cyan-300 font-mono text-xs font-semibold border border-cyan-500/40 shadow-[0_4px_24px_rgba(0,0,0,0.7)] backdrop-blur-md cursor-pointer transition-all hover:scale-105"
-        >
-          <Maximize2 className="w-4 h-4 text-cyan-400" />
-          <span>Restore Operations Dashboard (H)</span>
-        </button>
+      {/* 7. Minimal Restore HUD Control when in Clean View */}
+      {isCleanView && (
+        <div className="fixed top-4 right-5 z-40 flex items-center gap-2 animate-in fade-in duration-200">
+          <button
+            onClick={togglePanelsCollapsed}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/85 hover:bg-slate-800 text-cyan-300 font-mono text-xs font-semibold border border-cyan-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.6)] backdrop-blur-md cursor-pointer transition-all hover:scale-105"
+            title="Restore Operations Dashboard (H or Esc)"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Restore Dashboard (H)</span>
+          </button>
+        </div>
       )}
 
       {/* 8. Search Modal */}

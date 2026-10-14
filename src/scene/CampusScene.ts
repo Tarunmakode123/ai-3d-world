@@ -84,7 +84,7 @@ export class CampusScene {
   private cinematicWaypointIndex: number = 0
   private cinematicTimer: number = 0
   public cinematicWaypoints = [
-    { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-10, 48, 56), target: new THREE.Vector3(5, 2.5, -9), duration: 9 },
+    { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-6, 44, 48), target: new THREE.Vector3(5, 2.0, -7), duration: 9 },
     { name: 'Hall A // Foundation Training Cluster', pos: new THREE.Vector3(-12, 16, 8), target: new THREE.Vector3(-11, 2.5, -9), duration: 7 },
     { name: 'Hall B // Inference & MoE Swarm', pos: new THREE.Vector3(16, 16, 4), target: new THREE.Vector3(23, 2.5, -9), duration: 7 },
     { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
@@ -112,11 +112,11 @@ export class CampusScene {
     this.scene.background = new THREE.Color(0x060f1b)
     this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0022)
 
-    // 2. Camera: Elevated diagonal 3/4 aerial view matching IMAGE 2
-    // Positioned and angled to reveal the open server halls, cooling yard, and power infrastructure
+    // 2. Camera: Optimized showcase elevated diagonal 3/4 aerial view matching IMAGE 2
+    // Positioned and angled to eliminate dead foreground space while showcasing Hall A, Hall B, cooling and logistics
     const aspect = container.clientWidth / container.clientHeight
-    this.camera = new THREE.PerspectiveCamera(40, aspect, 0.5, 450)
-    this.camera.position.set(-10, 48, 56)
+    this.camera = new THREE.PerspectiveCamera(42, aspect, 0.5, 450)
+    this.camera.position.set(-6, 44, 48)
 
     // 3. Renderer with full sRGB color space & balanced tone mapping
     this.renderer = new THREE.WebGLRenderer({
@@ -140,18 +140,18 @@ export class CampusScene {
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05
     this.controls.minDistance = 10
     this.controls.maxDistance = 150
-    this.controls.target.set(5, 2.5, -9)
+    this.controls.target.set(5, 2.0, -7)
 
-    // 5. Lighting Setup (Rich nocturnal industrial lighting matching IMAGE 2)
-    this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.3)
+    // 5. Lighting Setup (Natural nocturnal architectural lighting balancing warm interiors with cool skylight)
+    this.ambientLight = new THREE.AmbientLight(0x2a3b50, 1.1)
     this.scene.add(this.ambientLight)
 
-    this.hemiLight = new THREE.HemisphereLight(0x60a5fa, 0x111c29, 1.1)
+    this.hemiLight = new THREE.HemisphereLight(0x475569, 0x0f172a, 0.8)
     this.scene.add(this.hemiLight)
 
-    // Key Light from upper right front (soft warm white moonlight)
-    this.dirLight = new THREE.DirectionalLight(0xf8fafc, 2.1)
-    this.dirLight.position.set(48, 65, 42)
+    // Key Light from upper right front (soft crisp moonlight)
+    this.dirLight = new THREE.DirectionalLight(0xf1f5f9, 2.1)
+    this.dirLight.position.set(45, 62, 38)
     this.dirLight.castShadow = true
     this.dirLight.shadow.mapSize.width = 2048
     this.dirLight.shadow.mapSize.height = 2048
@@ -165,14 +165,14 @@ export class CampusScene {
     this.dirLight.shadow.bias = -0.00015
     this.scene.add(this.dirLight)
 
-    // Secondary Fill Light from upper left front (cool slate blue)
-    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.1)
-    this.fillLight.position.set(-48, 42, 28)
+    // Secondary Fill Light from upper left front (neutral cool slate fill, removing artificial cyan cast)
+    this.fillLight = new THREE.DirectionalLight(0x64748b, 0.8)
+    this.fillLight.position.set(-45, 38, 25)
     this.scene.add(this.fillLight)
 
-    // Rim Light from rear top for crisp silhouettes
-    this.rimLight = new THREE.DirectionalLight(0x22d3ee, 1.2)
-    this.rimLight.position.set(12, 38, -60)
+    // Rim Light from rear top for crisp architectural silhouettes
+    this.rimLight = new THREE.DirectionalLight(0x94a3b8, 0.7)
+    this.rimLight.position.set(10, 35, -55)
     this.scene.add(this.rimLight)
 
     // 6. Build the Entire Redesigned Industrial Campus World
@@ -353,15 +353,31 @@ export class CampusScene {
       this.scene.add(wireR)
     }
 
-    // 5. Perimeter Lush Green Evergreen Trees (Matching IMAGE 2)
-    const trunkGeo = new THREE.CylinderGeometry(0.22, 0.3, 2.0, 6)
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.9 })
-    const foliageGeo = new THREE.DodecahedronGeometry(1.6, 1)
+    // 5. Perimeter & Campus Multi-Tiered Evergreen Conifer Trees & Mulch Landscaping
+    const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, 2.2, 8)
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x292524, // dark natural bark
+      roughness: 0.95,
+      metalness: 0.05,
+    })
+
+    const mulchBedGeo = new THREE.CylinderGeometry(1.6, 1.7, 0.08, 12)
+    const mulchBedMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1917, // rich dark organic mulch bedding
+      roughness: 0.98,
+      metalness: 0.02,
+    })
+
+    // Multi-tiered conifer canopies with smooth normals (no faceted low-poly dodecahedrons)
+    const tierBottomGeo = new THREE.ConeGeometry(1.65, 2.0, 8)
+    const tierMidGeo = new THREE.ConeGeometry(1.25, 1.8, 8)
+    const tierTopGeo = new THREE.ConeGeometry(0.85, 1.5, 8)
+
     const foliageMat = new THREE.MeshStandardMaterial({
-      color: 0x166534, // lush natural pine/evergreen green
-      roughness: 0.7,
-      metalness: 0.1,
-      flatShading: true,
+      color: 0x142b20, // authentic deep evergreen / pine needle green
+      roughness: 0.85,
+      metalness: 0.05,
+      flatShading: false,
     })
 
     const treePositions = [
@@ -382,15 +398,41 @@ export class CampusScene {
       [-56, 0, 54], [-38, 0, 56], [-20, 0, 54], [4, 0, 56], [26, 0, 54], [46, 0, 56],
     ]
 
-    treePositions.forEach(([tx, ty, tz]) => {
+    treePositions.forEach(([tx, ty, tz], idx) => {
       const tree = new THREE.Group()
+      // Subtle natural variation in height and rotation
+      const scale = 0.88 + ((idx * 7) % 5) * 0.07
+      const rotY = (idx * 1.3) % (Math.PI * 2)
       tree.position.set(tx, ty, tz)
+      tree.scale.set(scale, scale, scale)
+      tree.rotation.y = rotY
+
+      // Mulch landscaping bed
+      const mulch = new THREE.Mesh(mulchBedGeo, mulchBedMat)
+      mulch.position.y = 0.04
+      mulch.receiveShadow = true
+      tree.add(mulch)
+
+      // Trunk
       const trunk = new THREE.Mesh(trunkGeo, trunkMat)
-      trunk.position.y = 1.0
-      const foliage = new THREE.Mesh(foliageGeo, foliageMat)
-      foliage.position.y = 3.2
-      foliage.castShadow = true
-      tree.add(trunk, foliage)
+      trunk.position.y = 1.1
+      trunk.castShadow = true
+      tree.add(trunk)
+
+      // Three tiered conifer tiers
+      const bottom = new THREE.Mesh(tierBottomGeo, foliageMat)
+      bottom.position.y = 2.4
+      bottom.castShadow = true
+
+      const mid = new THREE.Mesh(tierMidGeo, foliageMat)
+      mid.position.y = 3.4
+      mid.castShadow = true
+
+      const top = new THREE.Mesh(tierTopGeo, foliageMat)
+      top.position.y = 4.3
+      top.castShadow = true
+
+      tree.add(bottom, mid, top)
       this.scene.add(tree)
     })
   }
@@ -439,9 +481,9 @@ export class CampusScene {
     })
 
     const cableTrayMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b, // safety yellow/orange cable ladder tray
-      roughness: 0.4,
-      metalness: 0.8,
+      color: 0x334155, // galvanized steel industrial cable ladder mesh
+      roughness: 0.5,
+      metalness: 0.85,
     })
 
     const buswayMat = new THREE.MeshStandardMaterial({
@@ -600,11 +642,11 @@ export class CampusScene {
 
     // Entrance Glass Lobby Curtain Wall (Front face of central pavilion)
     const glassMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      roughness: 0.1,
-      metalness: 0.9,
+      color: 0x081522, // dark architectural solar-reflective tint
+      roughness: 0.08,
+      metalness: 0.95,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.85,
     })
     const glassCurtain = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 0.2), glassMat)
     glassCurtain.position.set(6, 2.6, 14.1)
@@ -1324,10 +1366,10 @@ export class CampusScene {
     coolingGroup.add(chiller)
     this.interactiveMeshes.push(chiller)
 
-    // Lower Evaporator Barrel (Blue Insulated Vessel)
+    // Lower Evaporator Barrel (Dual-Shell Industrial Vessel)
     const evapGeo = new THREE.CylinderGeometry(0.85, 0.85, 8.8, 16)
     evapGeo.rotateZ(Math.PI / 2)
-    const evapMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.25 })
+    const evapMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.35 })
     const evap = new THREE.Mesh(evapGeo, evapMat)
     evap.position.set(-28, 1.5, -14.8)
     evap.castShadow = true
@@ -1336,11 +1378,21 @@ export class CampusScene {
     // Upper Condenser Barrel
     const condGeo = new THREE.CylinderGeometry(0.75, 0.75, 8.4, 16)
     condGeo.rotateZ(Math.PI / 2)
-    const condMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, metalness: 0.85, roughness: 0.25 })
+    const condMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.35 })
     const cond = new THREE.Mesh(condGeo, condMat)
     cond.position.set(-28, 2.9, -13.4)
     cond.castShadow = true
     coolingGroup.add(cond)
+
+    // Stainless Steel Reinforcement Bands on barrels
+    const bandGeo = new THREE.CylinderGeometry(0.87, 0.87, 0.14, 16)
+    bandGeo.rotateZ(Math.PI / 2)
+    const bandMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 })
+    for (let bx of [-31.5, -29.5, -28, -26.5, -24.5]) {
+      const bE = new THREE.Mesh(bandGeo, bandMat)
+      bE.position.set(bx, 1.5, -14.8)
+      coolingGroup.add(bE)
+    }
 
     // Central Centrifugal Compressor
     const compVoluteGeo = new THREE.CylinderGeometry(0.75, 0.75, 1.8, 16)
@@ -1360,18 +1412,20 @@ export class CampusScene {
     vfdScreen.position.set(-23.8, 1.6, -13.48)
     coolingGroup.add(vfd, vfdScreen)
 
-    // 4. Large Blue Insulated Pipe Racks connecting Cooling to Data Hall (Matching IMAGE 2)
+    // 4. Large Insulated Pipe Racks connecting Cooling to Data Hall (Matching IMAGE 2)
     const pipeMatSupply = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      emissive: 0x0369a1,
-      emissiveIntensity: 0.35,
+      color: 0x0369a1,
+      emissive: 0x075985,
+      emissiveIntensity: 0.08,
       metalness: 0.85,
+      roughness: 0.35,
     })
     const pipeMatReturn = new THREE.MeshStandardMaterial({
-      color: 0x22d3ee,
-      emissive: 0x0891b2,
-      emissiveIntensity: 0.35,
+      color: 0x0f766e,
+      emissive: 0x115e59,
+      emissiveIntensity: 0.08,
       metalness: 0.85,
+      roughness: 0.35,
     })
 
     // Elevated H-Frame Pipe Supports from X: -38 to X: -26
@@ -1936,7 +1990,7 @@ export class CampusScene {
   // COOLING VAPOR (THICK SOFT STEAM PLUMES)
   // ==========================================
   private buildCoolingVaporParticles() {
-    const particleCount = 320
+    const particleCount = 340
     const positions = new Float32Array(particleCount * 3)
     const towerXs = [-38, -28, -18]
 
@@ -1950,11 +2004,28 @@ export class CampusScene {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
+    // Soft circular radial plume texture for photorealistic water vapor
+    const canvas = document.createElement('canvas')
+    canvas.width = 32
+    canvas.height = 32
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.85)')
+      grad.addColorStop(0.35, 'rgba(224, 242, 254, 0.4)')
+      grad.addColorStop(0.8, 'rgba(224, 242, 254, 0.08)')
+      grad.addColorStop(1, 'rgba(224, 242, 254, 0)')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, 32, 32)
+    }
+    const vaporTex = new THREE.CanvasTexture(canvas)
+
     const mat = new THREE.PointsMaterial({
-      color: 0xe0f2fe, // soft dense white/cyan steam plume
-      size: 1.35,
+      color: 0xf0f9ff, // soft natural condensing water vapor
+      map: vaporTex,
+      size: 2.2,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.42,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     })
@@ -2248,7 +2319,7 @@ export class CampusScene {
       this.jumpToCinematicWaypoint(0)
     } else {
       // Return to default elevated 3/4 perspective matching reference
-      this.transitionTo(new THREE.Vector3(-10, 48, 56), new THREE.Vector3(5, 2.5, -9))
+      this.transitionTo(new THREE.Vector3(-6, 44, 48), new THREE.Vector3(5, 2.0, -7))
     }
   }
 

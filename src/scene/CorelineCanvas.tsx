@@ -15,7 +15,11 @@ import {
   Layers,
 } from 'lucide-react'
 
-export const CorelineCanvas: React.FC = () => {
+interface CorelineCanvasProps {
+  isCleanView?: boolean
+}
+
+export const CorelineCanvas: React.FC<CorelineCanvasProps> = ({ isCleanView = false }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneInstanceRef = useRef<CampusScene | null>(null)
   const [hoveredName, setHoveredName] = useState<string | null>(null)
@@ -237,6 +241,7 @@ export const CorelineCanvas: React.FC = () => {
 
       {/* Floating In-World Holographic Badges (Matching IMAGE 2!) */}
       {!isCinematic &&
+        !isCleanView &&
         showFacilityBadges &&
         inWorldBadges.map((badge) => {
           const screenPos = badgeScreenPositions.find((p) => p.id === badge.id)
@@ -281,7 +286,7 @@ export const CorelineCanvas: React.FC = () => {
         })}
 
       {/* Hover Object Quick Label */}
-      {hoveredName && !isCinematic && (
+      {hoveredName && !isCinematic && !isCleanView && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-xl transition-opacity duration-200">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
           <span>{hoveredName}</span>
