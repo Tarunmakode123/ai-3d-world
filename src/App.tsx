@@ -59,7 +59,7 @@ const CorelineDashboard: React.FC = () => {
       )}
 
       {/* 5. Right Sidebar: Object Detail Panel & Workload Tracker (IMAGE 2) */}
-      <div className="absolute top-14 sm:top-16 right-3 sm:right-5 z-20 flex flex-col gap-3 w-80 sm:w-96 max-h-[calc(100vh-80px)] overflow-y-auto pointer-events-none pr-0.5">
+      <div className="absolute top-14 sm:top-16 right-3 sm:right-5 z-20 flex flex-col gap-3 w-72 sm:w-80 lg:w-[330px] xl:w-[350px] max-h-[calc(100vh-80px)] overflow-y-auto pointer-events-none pr-0.5">
         <div className="pointer-events-auto">
           <ObjectDetailModal />
         </div>

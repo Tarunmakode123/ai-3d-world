@@ -279,7 +279,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'HALL A',
     subtitle: '92% util',
     status: 'online',
-    position: [-6, 11, -4],
+    position: [-11, 10.5, -9],
     type: 'hall',
   },
   {
@@ -287,7 +287,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'HALL B',
     subtitle: '64% util',
     status: 'online',
-    position: [18, 11, -14],
+    position: [23, 10.5, -9],
     type: 'hall',
   },
   {
@@ -319,7 +319,7 @@ export const initialInWorldBadges: InWorldBadge[] = [
     title: 'BACKUP GENERATORS',
     subtitle: '48 MW',
     status: '6/6 Online',
-    position: [-42, 6.5, 18],
+    position: [-44, 7.5, 19],
     type: 'power',
   },
   {
