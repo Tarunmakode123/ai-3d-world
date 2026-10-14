@@ -128,7 +128,7 @@ export class CampusScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.35
+    this.renderer.toneMappingExposure = 1.25
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(this.renderer.domElement)
@@ -143,14 +143,14 @@ export class CampusScene {
     this.controls.target.set(4, 2.5, -7)
 
     // 5. Lighting Setup (Rich nocturnal industrial lighting matching IMAGE 2)
-    this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.4)
+    this.ambientLight = new THREE.AmbientLight(0x4a6282, 1.3)
     this.scene.add(this.ambientLight)
 
-    this.hemiLight = new THREE.HemisphereLight(0x60a5fa, 0x111c29, 1.2)
+    this.hemiLight = new THREE.HemisphereLight(0x60a5fa, 0x111c29, 1.1)
     this.scene.add(this.hemiLight)
 
     // Key Light from upper right front (soft warm white moonlight)
-    this.dirLight = new THREE.DirectionalLight(0xf8fafc, 2.3)
+    this.dirLight = new THREE.DirectionalLight(0xf8fafc, 2.1)
     this.dirLight.position.set(48, 65, 42)
     this.dirLight.castShadow = true
     this.dirLight.shadow.mapSize.width = 2048
@@ -166,12 +166,12 @@ export class CampusScene {
     this.scene.add(this.dirLight)
 
     // Secondary Fill Light from upper left front (cool slate blue)
-    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.2)
+    this.fillLight = new THREE.DirectionalLight(0x38bdf8, 1.1)
     this.fillLight.position.set(-48, 42, 28)
     this.scene.add(this.fillLight)
 
     // Rim Light from rear top for crisp silhouettes
-    this.rimLight = new THREE.DirectionalLight(0x22d3ee, 1.3)
+    this.rimLight = new THREE.DirectionalLight(0x22d3ee, 1.2)
     this.rimLight.position.set(12, 38, -60)
     this.scene.add(this.rimLight)
 
@@ -770,9 +770,9 @@ export class CampusScene {
     complexGroup.add(hallASign)
 
     // Hall A Downlights (High-intensity electric cyan & blue downward wash)
-    const hallALight1 = new THREE.PointLight(0x22d3ee, 4.5, 36)
+    const hallALight1 = new THREE.PointLight(0x22d3ee, 2.6, 36)
     hallALight1.position.set(-11, 6.2, -16)
-    const hallALight2 = new THREE.PointLight(0x38bdf8, 4.2, 36)
+    const hallALight2 = new THREE.PointLight(0x38bdf8, 2.4, 36)
     hallALight2.position.set(-11, 6.2, 0)
     complexGroup.add(hallALight1, hallALight2)
     this.hallLights.push(hallALight1, hallALight2)
@@ -841,9 +841,9 @@ export class CampusScene {
     complexGroup.add(hallBSign)
 
     // Hall B Downlights (Dual-Color: Warm Amber Hot Aisle + Cool Blue Compute Node Wash)
-    const hallBLightWarm = new THREE.PointLight(0xf97316, 4.5, 36)
+    const hallBLightWarm = new THREE.PointLight(0xf97316, 2.6, 36)
     hallBLightWarm.position.set(23, 6.2, -16)
-    const hallBLightCool = new THREE.PointLight(0x0284c7, 4.2, 36)
+    const hallBLightCool = new THREE.PointLight(0x0284c7, 2.4, 36)
     hallBLightCool.position.set(23, 6.2, 0)
     complexGroup.add(hallBLightWarm, hallBLightCool)
     this.hallLights.push(hallBLightWarm, hallBLightCool)
@@ -1642,7 +1642,7 @@ export class CampusScene {
 
     // Animated Cyan Data Packets
     const packetGeo = new THREE.SphereGeometry(0.38, 8, 8)
-    const packetMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+    const packetMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
 
     for (let i = 0; i < 20; i++) {
       const packet = new THREE.Mesh(packetGeo, packetMat)
@@ -1685,7 +1685,7 @@ export class CampusScene {
     const bCab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 2.4), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 }))
     bCab.position.set(0, 1.1, 2.2)
     bCab.castShadow = true
-    const bBox = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.6, 5.4), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.5, roughness: 0.3 }))
+    const bBox = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.6, 5.4), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.3 }))
     bBox.position.set(0, 1.5, -1.4)
     bBox.castShadow = true
     boxTruckGroup.add(bCab, bBox)
@@ -1709,7 +1709,7 @@ export class CampusScene {
 
     // Painted White Parking Stall Lines (Directly matching IMAGE 2)
     const stallLineGeo = new THREE.PlaneGeometry(0.12, 4.8)
-    const stallLineMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+    const stallLineMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 })
     for (let sx = -13; sx <= 13; sx += 2.6) {
       const line1 = new THREE.Mesh(stallLineGeo, stallLineMat)
       line1.rotation.x = -Math.PI / 2
@@ -1811,15 +1811,12 @@ export class CampusScene {
     this.truckGroup.add(cab)
 
     const trailerGeo = new THREE.BoxGeometry(2.6, 2.9, 7.2)
-    const trailerMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.5, roughness: 0.3 })
+    const trailerMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.3 })
     const trailer = new THREE.Mesh(trailerGeo, trailerMat)
     trailer.position.set(0, 1.1, -1.8)
     trailer.castShadow = true
+    trailer.userData = { id: 'VEH-TRUCK-01', name: 'Heavy Delivery Rig 404', type: 'vehicle' }
     this.truckGroup.add(trailer)
-
-    this.truckGroup.userData = { id: 'VEH-TRUCK-01', name: 'Heavy Delivery Rig 404', type: 'vehicle' }
-    this.interactiveMeshes.push(trailer)
-    this.scene.add(this.truckGroup)
 
     this.truckGroup.userData = { id: 'VEH-TRUCK-01', name: 'Heavy Delivery Rig 404', type: 'vehicle' }
     this.interactiveMeshes.push(trailer)
@@ -2120,32 +2117,32 @@ export class CampusScene {
       this.scene.background = new THREE.Color(0x1a2636)
       this.scene.fog = new THREE.FogExp2(0x1a2636, 0.002)
       this.ambientLight.color.setHex(0x94b8e6)
-      this.ambientLight.intensity = 1.8
+      this.ambientLight.intensity = 1.6
       this.hemiLight.color.setHex(0x93c5fd)
       this.hemiLight.groundColor.setHex(0x334e68)
-      this.hemiLight.intensity = 1.4
+      this.hemiLight.intensity = 1.3
       this.dirLight.color.setHex(0xfffbeb)
-      this.dirLight.intensity = 2.8
+      this.dirLight.intensity = 2.5
       this.fillLight.color.setHex(0x7dd3fc)
-      this.fillLight.intensity = 1.6
+      this.fillLight.intensity = 1.4
       this.rimLight.color.setHex(0xbae6fd)
-      this.rimLight.intensity = 1.2
-      this.renderer.toneMappingExposure = 1.35
+      this.rimLight.intensity = 1.1
+      this.renderer.toneMappingExposure = 1.25
     } else {
       this.scene.background = new THREE.Color(0x060f1b)
       this.scene.fog = new THREE.FogExp2(0x060f1b, 0.0022)
       this.ambientLight.color.setHex(0x4a6282)
-      this.ambientLight.intensity = 1.4
+      this.ambientLight.intensity = 1.3
       this.hemiLight.color.setHex(0x60a5fa)
       this.hemiLight.groundColor.setHex(0x111c29)
-      this.hemiLight.intensity = 1.2
+      this.hemiLight.intensity = 1.1
       this.dirLight.color.setHex(0xf1f5f9)
-      this.dirLight.intensity = 2.2
+      this.dirLight.intensity = 2.1
       this.fillLight.color.setHex(0x38bdf8)
-      this.fillLight.intensity = 1.3
+      this.fillLight.intensity = 1.1
       this.rimLight.color.setHex(0x22d3ee)
-      this.rimLight.intensity = 1.4
-      this.renderer.toneMappingExposure = 1.35
+      this.rimLight.intensity = 1.2
+      this.renderer.toneMappingExposure = 1.25
     }
   }
 
@@ -2232,14 +2229,20 @@ export class CampusScene {
         const newRack = assetLoader.cloneModel(prototype, true)
         newRack.position.set(posX, 0.15, posZ)
 
-        const collider = newRack.getObjectByName('Rack_Collider') || newRack
-        collider.userData = {
+        // Dedicated invisible raycast hit box for interactive selection
+        const hitBox = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 3.8, 1.3),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+        )
+        hitBox.position.set(0, 1.9, 0)
+        hitBox.userData = {
           id: rackId,
           name: `${rackId} (NVIDIA H100 SXM5 / 3.2 Tbps NVLink)`,
           type: 'rack',
           hallId: 'hall-a',
         }
-        this.interactiveMeshes.push(collider)
+        newRack.add(hitBox)
+        this.interactiveMeshes.push(hitBox)
 
         const rackLeds: THREE.MeshBasicMaterial[] = []
         newRack.traverse((child) => {
@@ -2276,14 +2279,20 @@ export class CampusScene {
         const newRack = assetLoader.cloneModel(prototype, true)
         newRack.position.set(posX, 0.15, posZ)
 
-        const collider = newRack.getObjectByName('Rack_Collider') || newRack
-        collider.userData = {
+        // Dedicated invisible raycast hit box for interactive selection
+        const hitBox = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 3.8, 1.3),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+        )
+        hitBox.position.set(0, 1.9, 0)
+        hitBox.userData = {
           id: rackId,
           name: `${rackId} (B200 NVL / TPU v5p Cluster)`,
           type: 'rack',
           hallId: 'hall-b',
         }
-        this.interactiveMeshes.push(collider)
+        newRack.add(hitBox)
+        this.interactiveMeshes.push(hitBox)
 
         const rackLeds: THREE.MeshBasicMaterial[] = []
         newRack.traverse((child) => {
@@ -2324,13 +2333,18 @@ export class CampusScene {
       const newTower = assetLoader.cloneModel(prototype, false)
       newTower.position.set(tx, 0, -28)
 
-      const collider = newTower.getObjectByName('CoolingTower_Collider') || newTower
-      collider.userData = {
+      const hitBox = new THREE.Mesh(
+        new THREE.BoxGeometry(8.6, 8.8, 8.6),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      )
+      hitBox.position.set(0, 4.4, 0)
+      hitBox.userData = {
         id: towerId,
         name: `Cooling Tower Bank ${idx + 1} (55 MW)`,
         type: 'cooling',
       }
-      this.interactiveMeshes.push(collider)
+      newTower.add(hitBox)
+      this.interactiveMeshes.push(hitBox)
 
       const fanRotor = newTower.getObjectByName('Tower_Fan_Rotor') as THREE.Group
       if (fanRotor) {
@@ -2356,13 +2370,18 @@ export class CampusScene {
       const newXformer = assetLoader.cloneModel(prototype, false)
       newXformer.position.set(tx, 0, 5)
 
-      const collider = newXformer.getObjectByName('Transformer_Collider') || newXformer
-      collider.userData = {
+      const hitBox = new THREE.Mesh(
+        new THREE.BoxGeometry(4.2, 4.4, 3.2),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      )
+      hitBox.position.set(0, 2.2, 0)
+      hitBox.userData = {
         id: xformerId,
         name: idx === 0 ? 'Power Substation (132 MW Grid-Tied)' : `Aux Step-Down Transformer 0${idx + 1}`,
         type: 'power',
       }
-      this.interactiveMeshes.push(collider)
+      newXformer.add(hitBox)
+      this.interactiveMeshes.push(hitBox)
 
       this.transformerGroups.push(newXformer)
       this.powerParentGroup?.add(newXformer)
@@ -2383,13 +2402,18 @@ export class CampusScene {
       const newGen = assetLoader.cloneModel(prototype, false)
       newGen.position.set(-44, 0, gz)
 
-      const collider = newGen.getObjectByName('Generator_Collider') || newGen
-      collider.userData = {
+      const hitBox = new THREE.Mesh(
+        new THREE.BoxGeometry(7.8, 4.6, 3.8),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      )
+      hitBox.position.set(0, 2.3, 0)
+      hitBox.userData = {
         id: genId,
         name: `Backup Diesel Generator 0${idx + 1} (48 MW)`,
         type: 'power',
       }
-      this.interactiveMeshes.push(collider)
+      newGen.add(hitBox)
+      this.interactiveMeshes.push(hitBox)
 
       this.generatorGroups.push(newGen)
       this.powerParentGroup?.add(newGen)

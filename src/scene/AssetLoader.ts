@@ -35,11 +35,17 @@ export class AssetLoader {
         url,
         (gltf) => {
           const root = gltf.scene || gltf.scenes[0]
-          // Enable shadow casting and receiving on child meshes
+          // Enable shadow casting and receiving on visual child meshes only
           root.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-              child.castShadow = true
-              child.receiveShadow = true
+              if (child.name.toLowerCase().includes('collider')) {
+                child.visible = false
+                child.castShadow = false
+                child.receiveShadow = false
+              } else {
+                child.castShadow = true
+                child.receiveShadow = true
+              }
             }
           })
           this.modelCache.set(url, root)

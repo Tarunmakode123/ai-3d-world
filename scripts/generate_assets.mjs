@@ -53,44 +53,44 @@ function buildServerRackModel() {
   const rackGroup = new THREE.Group()
   rackGroup.name = 'ServerRack_Root'
 
-  // Dimensions: 2.2m Width, 3.8m Height, 1.3m Depth (Center at Y = 1.9)
+  // Dimensions: 2.2m Width, 3.8m Height, 1.3m Depth (Base sits at Y = 0)
   const W = 2.2
   const H = 3.8
   const D = 1.3
 
-  // Materials
+  // Industrial PBR Materials (Dark graphite & titanium aesthetic matching IMAGE 2)
   const frameMat = new THREE.MeshStandardMaterial({
-    color: 0x090e17,
-    roughness: 0.35,
-    metalness: 0.7,
+    color: 0x0c131c,
+    roughness: 0.5,
+    metalness: 0.6,
   })
 
   const chassisMat = new THREE.MeshStandardMaterial({
-    color: 0x1a2332,
-    roughness: 0.4,
-    metalness: 0.8,
+    color: 0x16202c,
+    roughness: 0.45,
+    metalness: 0.75,
   })
 
   const railMat = new THREE.MeshStandardMaterial({
-    color: 0x334155,
-    roughness: 0.3,
-    metalness: 0.9,
+    color: 0x273549,
+    roughness: 0.4,
+    metalness: 0.85,
   })
 
   const portMat = new THREE.MeshStandardMaterial({
     color: 0x0284c7,
-    roughness: 0.2,
-    metalness: 0.8,
+    roughness: 0.3,
+    metalness: 0.7,
   })
 
   const handleMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8,
-    roughness: 0.25,
-    metalness: 0.95,
+    color: 0x475569,
+    roughness: 0.35,
+    metalness: 0.9,
   })
 
   // 1. Outer Heavy Chassis Frame (Top, Bottom, Left Wall, Right Wall, Rear Mesh)
-  // Left side wall
+  // Left and Right side walls
   const sideGeo = new THREE.BoxGeometry(0.08, H, D)
   const sideL = new THREE.Mesh(sideGeo, frameMat)
   sideL.position.set(-W / 2 + 0.04, H / 2, 0)
@@ -108,7 +108,7 @@ function buildServerRackModel() {
   // Rear perforated backing
   const rearMesh = new THREE.Mesh(
     new THREE.BoxGeometry(W - 0.16, H - 0.16, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.5 })
+    new THREE.MeshStandardMaterial({ color: 0x080e16, roughness: 0.7, metalness: 0.5 })
   )
   rearMesh.position.set(0, H / 2, -D / 2 + 0.02)
   rackGroup.add(rearMesh)
@@ -127,7 +127,7 @@ function buildServerRackModel() {
     rackGroup.add(rail)
   })
 
-  // 3. Front Perforated Bezel Door Frame (Recessed with open line of sight to blades)
+  // 3. Front Bezel Outer Frame (Recessed with open line of sight to server blades)
   const doorTop = new THREE.Mesh(new THREE.BoxGeometry(W - 0.12, 0.12, 0.06), frameMat)
   doorTop.position.set(0, H - 0.1, D / 2 - 0.03)
   const doorBottom = new THREE.Mesh(new THREE.BoxGeometry(W - 0.12, 0.12, 0.06), frameMat)
@@ -184,7 +184,7 @@ function buildServerRackModel() {
     for (let v = -0.55; v <= 0.55; v += 0.12) {
       const vent = new THREE.Mesh(
         new THREE.BoxGeometry(0.06, 0.14, 0.02),
-        new THREE.MeshStandardMaterial({ color: 0x050911, roughness: 0.9 })
+        new THREE.MeshStandardMaterial({ color: 0x050911, roughness: 0.9, metalness: 0.2 })
       )
       vent.position.set(v, 0.08, bladeStartZ + 0.03)
       bladeGroup.add(vent)
@@ -206,22 +206,15 @@ function buildServerRackModel() {
 
   // 5. Rear Vertical Power Distribution Unit (PDU) Strips
   const pduGeo = new THREE.BoxGeometry(0.08, H - 0.4, 0.08)
-  const pduMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.4, metalness: 0.7 })
+  const pduMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.45, metalness: 0.7 })
   const pduL = new THREE.Mesh(pduGeo, pduMat)
   pduL.position.set(-0.85, H / 2, -D / 2 + 0.15)
   const pduR = new THREE.Mesh(pduGeo, pduMat)
   pduR.position.set(0.85, H / 2, -D / 2 + 0.15)
   rackGroup.add(pduL, pduR)
 
-  // 6. Transparent Raycasting Collider Hull (Encompasses entire rack for flawless hit-testing)
-  const collider = new THREE.Mesh(
-    new THREE.BoxGeometry(W, H, D),
-    new THREE.MeshBasicMaterial({ visible: false })
-  )
-  collider.name = 'Rack_Collider'
-  collider.position.set(0, H / 2, 0)
-  rackGroup.add(collider)
-
+  // NOTE: Colliders are NOT exported in the GLB to prevent default-white material artifacts.
+  // Instead, transparent hit-testing volumes are instantiated at runtime in CampusScene.ts.
   return rackGroup
 }
 
@@ -233,24 +226,24 @@ function buildCoolingTowerModel() {
   group.name = 'CoolingTower_Root'
 
   const towerMat = new THREE.MeshStandardMaterial({
-    color: 0x475569,
-    metalness: 0.65,
-    roughness: 0.35,
+    color: 0x334155,
+    metalness: 0.55,
+    roughness: 0.45,
   })
   const steelMat = new THREE.MeshStandardMaterial({
     color: 0x1e293b,
-    metalness: 0.85,
-    roughness: 0.3,
+    metalness: 0.8,
+    roughness: 0.35,
   })
   const louverMat = new THREE.MeshStandardMaterial({
     color: 0x0f172a,
-    roughness: 0.5,
+    roughness: 0.6,
     metalness: 0.7,
   })
   const fanBladeMat = new THREE.MeshStandardMaterial({
     color: 0x0284c7,
-    metalness: 0.85,
-    roughness: 0.25,
+    metalness: 0.8,
+    roughness: 0.3,
   })
 
   // Lower Structural Steel Skid
@@ -299,7 +292,7 @@ function buildCoolingTowerModel() {
   // Safety Handrail on Fan Deck
   const rail = new THREE.Mesh(
     new THREE.BoxGeometry(8.2, 1.0, 8.2),
-    new THREE.MeshBasicMaterial({ color: 0x94a3b8, wireframe: true })
+    new THREE.MeshBasicMaterial({ color: 0x475569, wireframe: true })
   )
   rail.position.y = 8.3
   group.add(rail)
@@ -326,15 +319,6 @@ function buildCoolingTowerModel() {
   }
   group.add(fanRotor)
 
-  // Collider
-  const collider = new THREE.Mesh(
-    new THREE.BoxGeometry(8.6, 8.8, 8.6),
-    new THREE.MeshBasicMaterial({ visible: false })
-  )
-  collider.name = 'CoolingTower_Collider'
-  collider.position.y = 4.4
-  group.add(collider)
-
   return group
 }
 
@@ -346,20 +330,20 @@ function buildTransformerModel() {
   group.name = 'Transformer_Root'
 
   const tankMat = new THREE.MeshStandardMaterial({
-    color: 0x334155,
-    metalness: 0.8,
-    roughness: 0.35,
+    color: 0x273444,
+    metalness: 0.75,
+    roughness: 0.4,
   })
   const finMat = new THREE.MeshStandardMaterial({
     color: 0x1e293b,
-    metalness: 0.85,
+    metalness: 0.8,
     roughness: 0.4,
   })
   const insMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b,
-    emissive: 0xd97706,
-    emissiveIntensity: 0.4,
-    roughness: 0.25,
+    color: 0xd97706,
+    emissive: 0xb45309,
+    emissiveIntensity: 0.3,
+    roughness: 0.3,
   })
 
   // Main Oil Tank (3.4 x 3.2 x 3.0 m)
@@ -390,15 +374,6 @@ function buildTransformerModel() {
     group.add(bushing)
   }
 
-  // Collider
-  const collider = new THREE.Mesh(
-    new THREE.BoxGeometry(4.2, 4.4, 3.2),
-    new THREE.MeshBasicMaterial({ visible: false })
-  )
-  collider.name = 'Transformer_Collider'
-  collider.position.y = 2.0
-  group.add(collider)
-
   return group
 }
 
@@ -410,14 +385,14 @@ function buildGeneratorModel() {
   group.name = 'Generator_Root'
 
   const genMat = new THREE.MeshStandardMaterial({
-    color: 0x273444,
-    metalness: 0.65,
-    roughness: 0.45,
+    color: 0x1f2937,
+    metalness: 0.6,
+    roughness: 0.5,
   })
   const exhaustMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8,
-    metalness: 0.9,
-    roughness: 0.25,
+    color: 0x475569,
+    metalness: 0.85,
+    roughness: 0.35,
   })
 
   // Sound-Attenuated Enclosure (7.6 x 3.4 x 3.6 m)
@@ -456,15 +431,6 @@ function buildGeneratorModel() {
   beacon.position.set(-3.7, 3.2, 1.7)
   group.add(beacon)
 
-  // Collider
-  const collider = new THREE.Mesh(
-    new THREE.BoxGeometry(7.8, 4.6, 3.8),
-    new THREE.MeshBasicMaterial({ visible: false })
-  )
-  collider.name = 'Generator_Collider'
-  collider.position.y = 2.0
-  group.add(collider)
-
   return group
 }
 
@@ -472,14 +438,14 @@ function buildGeneratorModel() {
 // RUN GENERATION AND EXPORT
 // ==========================================
 async function main() {
-  console.log('[AssetGenerator] Starting 3D GLB Asset generation...')
+  console.log('[AssetGenerator] Starting 3D GLB Asset generation without colliders...')
 
   await exportToGlb(buildServerRackModel(), 'server_rack.glb')
   await exportToGlb(buildCoolingTowerModel(), 'cooling_tower.glb')
   await exportToGlb(buildTransformerModel(), 'transformer.glb')
   await exportToGlb(buildGeneratorModel(), 'generator.glb')
 
-  console.log('[AssetGenerator] All GLB assets successfully generated!')
+  console.log('[AssetGenerator] All GLB assets successfully generated without colliders!')
 }
 
 main().catch(console.error)
