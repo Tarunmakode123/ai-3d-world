@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { AssetLoader } from './AssetLoader'
 import type {
   WeatherType,
   DayNightMode,
@@ -37,6 +38,12 @@ export class CampusScene {
   private interactiveMeshes: THREE.Object3D[] = []
   private rackMeshMap: Map<string, THREE.Group> = new Map()
   private rackLedMaterials: Map<string, THREE.MeshBasicMaterial[]> = new Map()
+  private lastTelemetryRacks: ServerRack[] = []
+  private coolingTowerGroups: THREE.Group[] = []
+  private transformerGroups: THREE.Group[] = []
+  private generatorGroups: THREE.Group[] = []
+  private coolingParentGroup: THREE.Group | null = null
+  private powerParentGroup: THREE.Group | null = null
 
   // Moving Vehicles & Parts
   private fans: THREE.Group[] = []
@@ -183,7 +190,10 @@ export class CampusScene {
     // 7. Event Listeners
     this.initEvents()
 
-    // 8. Start Loop
+    // 8. Asynchronously Preload & Upgrade to Detailed GLB Models (Hybrid Architecture)
+    this.loadHybridAssets()
+
+    // 9. Start Loop
     this.animate()
   }
 
@@ -1120,6 +1130,7 @@ export class CampusScene {
   // ==========================================
   private buildCoolingInfrastructure() {
     const coolingGroup = new THREE.Group()
+    this.coolingParentGroup = coolingGroup
 
     // 1. Concrete Equipment Foundation Pad for Cooling Yard
     const padGeo = new THREE.BoxGeometry(38, 0.5, 24)
@@ -1225,6 +1236,7 @@ export class CampusScene {
       towerGroup.add(fanGroup)
       this.fans.push(fanGroup)
 
+      this.coolingTowerGroups.push(towerGroup)
       coolingGroup.add(towerGroup)
     })
 
@@ -1340,6 +1352,7 @@ export class CampusScene {
   // ==========================================
   private buildPowerInfrastructure() {
     const powerGroup = new THREE.Group()
+    this.powerParentGroup = powerGroup
 
     // 1. High-Voltage Electrical Substation (132 MW Grid-Tied)
     const subPadGeo = new THREE.BoxGeometry(26, 0.4, 24)
@@ -1402,31 +1415,45 @@ export class CampusScene {
     powerGroup.add(blast1, blast2)
 
     // 3 Transformers at X: -46, -42, -38
+    let xfIdx = 0
     for (let tx = -46; tx <= -38; tx += 4) {
+      const xformerGroup = new THREE.Group()
+      xformerGroup.position.set(tx, 0, 5)
+
       // Main Tank
       const xformer = new THREE.Mesh(xformerBodyGeo, xformerMat)
-      xformer.position.set(tx, 1.8, 5)
+      xformer.position.y = 1.8
       xformer.castShadow = true
-      powerGroup.add(xformer)
+      xformer.userData = {
+        id: xfIdx === 0 ? 'SUBSTATION-MAIN' : `XFORMER-0${xfIdx + 1}`,
+        name: xfIdx === 0 ? 'Power Substation (132 MW Grid-Tied)' : `Aux Step-Down Transformer 0${xfIdx + 1}`,
+        type: 'power',
+      }
+      xformerGroup.add(xformer)
+      if (xfIdx === 0) this.interactiveMeshes.push(xformer)
 
       // Radiator Fin Banks on left and right
       const finsL = new THREE.Mesh(finBankGeo, finMat)
-      finsL.position.set(tx - 1.85, 1.8, 5)
+      finsL.position.set(-1.85, 1.8, 0)
       const finsR = new THREE.Mesh(finBankGeo, finMat)
-      finsR.position.set(tx + 1.85, 1.8, 5)
-      powerGroup.add(finsL, finsR)
+      finsR.position.set(1.85, 1.8, 0)
+      xformerGroup.add(finsL, finsR)
 
       // Top Conservator Tank
       const conservator = new THREE.Mesh(conservatorGeo, finMat)
-      conservator.position.set(tx, 3.75, 5)
-      powerGroup.add(conservator)
+      conservator.position.set(0, 3.75, 0)
+      xformerGroup.add(conservator)
 
       // 3 High-Voltage Bushings on top
       for (let b = -0.9; b <= 0.9; b += 0.9) {
         const bush = new THREE.Mesh(bushingGeo, insMat)
-        bush.position.set(tx + b, 3.9, 4.3)
-        powerGroup.add(bush)
+        bush.position.set(b, 3.9, -0.7)
+        xformerGroup.add(bush)
       }
+
+      this.transformerGroups.push(xformerGroup)
+      powerGroup.add(xformerGroup)
+      xfIdx++
     }
 
     // 2. Cluster of 6 Vertical Cylindrical Fuel Storage Tanks (Matching IMAGE 2)
@@ -1528,6 +1555,7 @@ export class CampusScene {
       genBeacon.position.set(-3.7, 3.2, 1.7)
       genGroup.add(genBeacon)
 
+      this.generatorGroups.push(genGroup)
       powerGroup.add(genGroup)
     })
 
@@ -2139,6 +2167,7 @@ export class CampusScene {
 
   // Update dynamic LED colors on racks from telemetry
   public updateRacksTelemetry(racks: ServerRack[]) {
+    this.lastTelemetryRacks = racks
     racks.forEach((rack) => {
       const leds = this.rackLedMaterials.get(rack.id)
       if (!leds) return
@@ -2154,6 +2183,216 @@ export class CampusScene {
           m.color.setHex(idx % 2 === 0 ? 0x22d3ee : 0x34d399)
         })
       }
+    })
+  }
+
+  // ==========================================
+  // HYBRID 3D ASSET ASYNCHRONOUS UPGRADES
+  // ==========================================
+  private async loadHybridAssets() {
+    try {
+      const assetLoader = AssetLoader.getInstance()
+      const { serverRack, coolingTower, transformer, generator } = await assetLoader.preloadCampusAssets()
+
+      if (serverRack) {
+        this.upgradeServerRacks(serverRack)
+      }
+      if (coolingTower) {
+        this.upgradeCoolingTowers(coolingTower)
+      }
+      if (transformer) {
+        this.upgradeTransformers(transformer)
+      }
+      if (generator) {
+        this.upgradeGenerators(generator)
+      }
+    } catch (err) {
+      console.warn('[CampusScene] Hybrid asset loading completed with procedural fallback:', err)
+    }
+  }
+
+  private upgradeServerRacks(prototype: THREE.Group) {
+    const assetLoader = AssetLoader.getInstance()
+
+    // 1. Upgrade Hall A Racks (NVIDIA H100 Foundation Cluster)
+    const hallARowZs = [-24, -18, -12, -6, 0, 6]
+    hallARowZs.forEach((rowZ, rowIndex) => {
+      for (let col = 0; col < 8; col++) {
+        const rackNumber = rowIndex * 8 + col + 1
+        const rackId = `RACK-A-${String(rackNumber).padStart(3, '0')}`
+        const posX = -22 + col * 3.1
+        const posZ = rowZ
+
+        const oldRack = this.rackMeshMap.get(rackId)
+        if (oldRack) {
+          this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== rackId)
+          this.scene.remove(oldRack)
+        }
+
+        const newRack = assetLoader.cloneModel(prototype, true)
+        newRack.position.set(posX, 0.15, posZ)
+
+        const collider = newRack.getObjectByName('Rack_Collider') || newRack
+        collider.userData = {
+          id: rackId,
+          name: `${rackId} (NVIDIA H100 SXM5 / 3.2 Tbps NVLink)`,
+          type: 'rack',
+          hallId: 'hall-a',
+        }
+        this.interactiveMeshes.push(collider)
+
+        const rackLeds: THREE.MeshBasicMaterial[] = []
+        newRack.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.name.includes('Rack_LED') &&
+            child.material instanceof THREE.MeshBasicMaterial
+          ) {
+            rackLeds.push(child.material)
+          }
+        })
+
+        this.rackLedMaterials.set(rackId, rackLeds)
+        this.rackMeshMap.set(rackId, newRack)
+        this.scene.add(newRack)
+      }
+    })
+
+    // 2. Upgrade Hall B Racks (B200 NVL / TPU Inference Cluster)
+    const hallBRowZs = [-24, -18, -12, -6, 0, 6]
+    hallBRowZs.forEach((rowZ, rowIndex) => {
+      for (let col = 0; col < 8; col++) {
+        const rackNumber = rowIndex * 8 + col + 1
+        const rackId = `RACK-B-${String(rackNumber).padStart(3, '0')}`
+        const posX = 12 + col * 3.1
+        const posZ = rowZ
+
+        const oldRack = this.rackMeshMap.get(rackId)
+        if (oldRack) {
+          this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== rackId)
+          this.scene.remove(oldRack)
+        }
+
+        const newRack = assetLoader.cloneModel(prototype, true)
+        newRack.position.set(posX, 0.15, posZ)
+
+        const collider = newRack.getObjectByName('Rack_Collider') || newRack
+        collider.userData = {
+          id: rackId,
+          name: `${rackId} (B200 NVL / TPU v5p Cluster)`,
+          type: 'rack',
+          hallId: 'hall-b',
+        }
+        this.interactiveMeshes.push(collider)
+
+        const rackLeds: THREE.MeshBasicMaterial[] = []
+        newRack.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.name.includes('Rack_LED') &&
+            child.material instanceof THREE.MeshBasicMaterial
+          ) {
+            rackLeds.push(child.material)
+          }
+        })
+
+        this.rackLedMaterials.set(rackId, rackLeds)
+        this.rackMeshMap.set(rackId, newRack)
+        this.scene.add(newRack)
+      }
+    })
+
+    // 3. Re-apply live telemetry colors to upgraded racks
+    if (this.lastTelemetryRacks.length > 0) {
+      this.updateRacksTelemetry(this.lastTelemetryRacks)
+    }
+  }
+
+  private upgradeCoolingTowers(prototype: THREE.Group) {
+    if (!this.coolingParentGroup) return
+    const assetLoader = AssetLoader.getInstance()
+    const towerXs = [-38, -28, -18]
+
+    this.coolingTowerGroups.forEach((g) => this.coolingParentGroup?.remove(g))
+    this.coolingTowerGroups = []
+    this.fans = []
+
+    towerXs.forEach((tx, idx) => {
+      const towerId = `COOL-TWR-0${idx + 1}`
+      this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== towerId)
+
+      const newTower = assetLoader.cloneModel(prototype, false)
+      newTower.position.set(tx, 0, -28)
+
+      const collider = newTower.getObjectByName('CoolingTower_Collider') || newTower
+      collider.userData = {
+        id: towerId,
+        name: `Cooling Tower Bank ${idx + 1} (55 MW)`,
+        type: 'cooling',
+      }
+      this.interactiveMeshes.push(collider)
+
+      const fanRotor = newTower.getObjectByName('Tower_Fan_Rotor') as THREE.Group
+      if (fanRotor) {
+        this.fans.push(fanRotor)
+      }
+
+      this.coolingTowerGroups.push(newTower)
+      this.coolingParentGroup?.add(newTower)
+    })
+  }
+
+  private upgradeTransformers(prototype: THREE.Group) {
+    if (!this.powerParentGroup) return
+    const assetLoader = AssetLoader.getInstance()
+    this.transformerGroups.forEach((g) => this.powerParentGroup?.remove(g))
+    this.transformerGroups = []
+
+    const xformerXs = [-46, -42, -38]
+    xformerXs.forEach((tx, idx) => {
+      const xformerId = idx === 0 ? 'SUBSTATION-MAIN' : `XFORMER-0${idx + 1}`
+      this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== xformerId)
+
+      const newXformer = assetLoader.cloneModel(prototype, false)
+      newXformer.position.set(tx, 0, 5)
+
+      const collider = newXformer.getObjectByName('Transformer_Collider') || newXformer
+      collider.userData = {
+        id: xformerId,
+        name: idx === 0 ? 'Power Substation (132 MW Grid-Tied)' : `Aux Step-Down Transformer 0${idx + 1}`,
+        type: 'power',
+      }
+      this.interactiveMeshes.push(collider)
+
+      this.transformerGroups.push(newXformer)
+      this.powerParentGroup?.add(newXformer)
+    })
+  }
+
+  private upgradeGenerators(prototype: THREE.Group) {
+    if (!this.powerParentGroup) return
+    const assetLoader = AssetLoader.getInstance()
+    this.generatorGroups.forEach((g) => this.powerParentGroup?.remove(g))
+    this.generatorGroups = []
+
+    const genZs = [10, 16, 22, 28]
+    genZs.forEach((gz, idx) => {
+      const genId = `GEN-BACKUP-0${idx + 1}`
+      this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== genId)
+
+      const newGen = assetLoader.cloneModel(prototype, false)
+      newGen.position.set(-44, 0, gz)
+
+      const collider = newGen.getObjectByName('Generator_Collider') || newGen
+      collider.userData = {
+        id: genId,
+        name: `Backup Diesel Generator 0${idx + 1} (48 MW)`,
+        type: 'power',
+      }
+      this.interactiveMeshes.push(collider)
+
+      this.generatorGroups.push(newGen)
+      this.powerParentGroup?.add(newGen)
     })
   }
 

@@ -11,6 +11,7 @@ import {
   Thermometer,
   Shield,
   MousePointer,
+  Layers,
 } from 'lucide-react'
 
 interface SettingsModalProps {
@@ -167,6 +168,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <li>• <strong className="text-slate-200">Left Click:</strong> Inspect server racks, towers, vehicles</li>
             <li>• <strong className="text-slate-200">Ctrl + K or /:</strong> Quick search assets</li>
           </ul>
+        </div>
+
+        {/* Section 4: Hybrid 3D Engine & Asset Credits */}
+        <div className="mb-5 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
+          <h4 className="text-xs font-mono font-bold text-slate-300 mb-2 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-purple-400" /> Hybrid 3D Asset Architecture
+          </h4>
+          <div className="text-[11px] font-mono text-slate-400 space-y-1.5">
+            <div>• <strong className="text-slate-200">3D Formats:</strong> glTF 2.0 Binary (.glb) with ACESFilmic PBR Materials</div>
+            <div>• <strong className="text-slate-200">Server Infrastructure:</strong> 42U AI Cluster Racks (NVIDIA H100 / B200 NVL)</div>
+            <div>• <strong className="text-slate-200">Licensing:</strong> Bundled Public Domain (CC0) / MIT compliant models</div>
+            <div>• <strong className="text-slate-200">Engine:</strong> Three.js WebGL2 with instanced telemetry & procedural particle physics</div>
+          </div>
         </div>
 
         {/* Notice Disclaimer */}
