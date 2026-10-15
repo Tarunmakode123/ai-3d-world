@@ -11,31 +11,32 @@ import type {
   InWorldBadge,
 } from '../types/simulation'
 
-// Generate 48 detailed GPU Racks distributed across Hall A and Hall B
+// Generate 96 detailed GPU Racks distributed across Hall A (48 racks) and Hall B (48 racks)
 export function generateInitialRacks(): ServerRack[] {
   const racks: ServerRack[] = []
-  const gpuTypes: ServerRack['gpuType'][] = ['NVIDIA H100 SXM5', 'NVIDIA H200', 'NVIDIA B200 NVL', 'Google TPU v5p']
+  const gpuTypesA: ServerRack['gpuType'][] = ['NVIDIA H100 SXM5', 'NVIDIA H200']
+  const gpuTypesB: ServerRack['gpuType'][] = ['NVIDIA B200 NVL', 'Google TPU v5p']
 
-  // Hall A: 24 racks (dense server matrix)
-  // Hall A Center is around X: -6, Z: -4
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 6; col++) {
-      const index = row * 6 + col + 1
-      const id = `RACK-A-${String(index).padStart(3, '0')}`
-      const posX = -14 + col * 2.8
-      const posZ = -10 + row * 4.2
-      const isHighLoad = (row + col) % 3 === 0
-      const baseUtil = isHighLoad ? 92 + Math.floor(Math.random() * 6) : 84 + Math.floor(Math.random() * 10)
-      const baseTemp = 48 + Math.floor(baseUtil * 0.32)
-      const basePower = 9.5 + (baseUtil / 100) * 5.5
+  // Hall A: 48 racks (6 rows of 8 racks)
+  const hallARowZs = [-24, -18, -12, -6, 0, 6]
+  hallARowZs.forEach((rowZ, rowIndex) => {
+    for (let col = 0; col < 8; col++) {
+      const rackNumber = rowIndex * 8 + col + 1
+      const id = `RACK-A-${String(rackNumber).padStart(3, '0')}`
+      const posX = -22 + col * 3.1
+      const posZ = rowZ
+      const isHighLoad = (rowIndex + col) % 3 === 0
+      const baseUtil = isHighLoad ? 91 + Math.floor(Math.random() * 8) : 82 + Math.floor(Math.random() * 12)
+      const baseTemp = 42 + Math.floor(baseUtil * 0.35)
+      const basePower = 9.8 + (baseUtil / 100) * 5.4
 
       racks.push({
         id,
         hallId: 'hall-a',
-        row,
-        col,
-        position: [posX, 1.8, posZ],
-        gpuType: gpuTypes[(row + col) % gpuTypes.length],
+        row: rowIndex + 1,
+        col: col + 1,
+        position: [posX, 1.9, posZ],
+        gpuType: gpuTypesA[(rowIndex + col) % gpuTypesA.length],
         gpuCount: 8,
         gpuUtilisation: baseUtil,
         temperature: baseTemp,
@@ -47,40 +48,40 @@ export function generateInitialRacks(): ServerRack[] {
         hasFault: false,
       })
     }
-  }
+  })
 
-  // Hall B: 24 racks (dense server matrix)
-  // Hall B Center is around X: 16, Z: -14
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 6; col++) {
-      const index = row * 6 + col + 1
-      const id = `RACK-B-${String(index).padStart(3, '0')}`
-      const posX = 8 + col * 2.8
-      const posZ = -20 + row * 4.2
-      const isHighLoad = (row + col) % 2 === 0
-      const baseUtil = isHighLoad ? 64 + Math.floor(Math.random() * 14) : 52 + Math.floor(Math.random() * 16)
-      const baseTemp = 42 + Math.floor(baseUtil * 0.3)
-      const basePower = 7.0 + (baseUtil / 100) * 6.2
+  // Hall B: 48 racks (6 rows of 8 racks)
+  const hallBRowZs = [-24, -18, -12, -6, 0, 6]
+  hallBRowZs.forEach((rowZ, rowIndex) => {
+    for (let col = 0; col < 8; col++) {
+      const rackNumber = rowIndex * 8 + col + 1
+      const id = `RACK-B-${String(rackNumber).padStart(3, '0')}`
+      const posX = 12 + col * 3.1
+      const posZ = rowZ
+      const isHighLoad = (rowIndex + col) % 2 === 0
+      const baseUtil = isHighLoad ? 74 + Math.floor(Math.random() * 18) : 58 + Math.floor(Math.random() * 16)
+      const baseTemp = 39 + Math.floor(baseUtil * 0.32)
+      const basePower = 7.8 + (baseUtil / 100) * 6.5
 
       racks.push({
         id,
         hallId: 'hall-b',
-        row,
-        col,
-        position: [posX, 1.8, posZ],
-        gpuType: gpuTypes[(row * 2 + col) % gpuTypes.length],
+        row: rowIndex + 1,
+        col: col + 1,
+        position: [posX, 1.9, posZ],
+        gpuType: gpuTypesB[(rowIndex + col) % gpuTypesB.length],
         gpuCount: 8,
         gpuUtilisation: baseUtil,
         temperature: baseTemp,
         powerKw: parseFloat(basePower.toFixed(2)),
-        memoryUtilisation: Math.min(96, baseUtil + 8),
+        memoryUtilisation: Math.min(98, baseUtil + 6),
         coolingAirflowCfm: Math.floor(750 + baseUtil * 7.5),
         health: 'healthy',
         currentJobId: null,
         hasFault: false,
       })
     }
-  }
+  })
 
   return racks
 }

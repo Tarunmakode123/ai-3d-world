@@ -75,8 +75,10 @@ export const CorelineCanvas: React.FC<CorelineCanvasProps> = ({ isCleanView = fa
       })
 
       sceneInstanceRef.current = scene
+      ;(window as any).__CAMPUS_SCENE__ = scene
 
       return () => {
+        delete (window as any).__CAMPUS_SCENE__
         scene.dispose()
         sceneInstanceRef.current = null
       }

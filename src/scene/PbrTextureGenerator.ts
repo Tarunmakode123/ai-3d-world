@@ -11,18 +11,122 @@ import * as THREE from 'three'
  */
 export class PbrTextureGenerator {
   private static cache: Map<string, THREE.CanvasTexture> = new Map()
+  private static envMapCache: THREE.Texture | null = null
+  public static maxAnisotropy: number = 8
+
+  public static setMaxAnisotropy(val: number) {
+    this.maxAnisotropy = Math.max(1, Math.min(val, 16))
+    // Update existing cached textures
+    this.cache.forEach((tex) => {
+      tex.anisotropy = this.maxAnisotropy
+      tex.needsUpdate = true
+    })
+  }
+
+  /**
+   * Generates a nocturnal HDRI environment map using HTML5 Canvas & PMREMGenerator.
+   * Produces realistic metallic reflections on titanium EIA rails, structural steel,
+   * copper busways, and architectural facades without external HDR file dependencies.
+   */
+  public static getNocturnalEnvironmentMap(renderer: THREE.WebGLRenderer): THREE.Texture {
+    if (this.envMapCache) return this.envMapCache
+
+    const W = 2048
+    const H = 1024
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')!
+
+    // Deep space zenith to nadir gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, H)
+    grad.addColorStop(0.0, '#020617') // deep nocturnal navy zenith
+    grad.addColorStop(0.32, '#061324') // midnight blue
+    grad.addColorStop(0.46, '#0b1d36') // upper horizon atmospheric scattering
+    grad.addColorStop(0.495, '#152b47') // bright horizon rim
+    grad.addColorStop(0.505, '#0f172a') // horizon line
+    grad.addColorStop(0.52, '#080d1a') // ground horizon
+    grad.addColorStop(0.70, '#04070e') // ground plane
+    grad.addColorStop(1.0, '#020306') // nadir
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, W, H)
+
+    // Distant horizon atmospheric ambient light glow
+    // Data Center compound cyan glow on horizon (center-left)
+    const cyanGlow = ctx.createRadialGradient(W * 0.35, H * 0.49, 10, W * 0.35, H * 0.49, 450)
+    cyanGlow.addColorStop(0, 'rgba(6, 182, 212, 0.45)')
+    cyanGlow.addColorStop(0.4, 'rgba(2, 132, 199, 0.22)')
+    cyanGlow.addColorStop(1, 'rgba(2, 132, 199, 0)')
+    ctx.fillStyle = cyanGlow
+    ctx.fillRect(0, 0, W, H)
+
+    // Substation / Industrial warm amber & sodium glow (left)
+    const amberGlow = ctx.createRadialGradient(W * 0.12, H * 0.50, 10, W * 0.12, H * 0.50, 380)
+    amberGlow.addColorStop(0, 'rgba(245, 158, 11, 0.40)')
+    amberGlow.addColorStop(0.5, 'rgba(217, 119, 6, 0.18)')
+    amberGlow.addColorStop(1, 'rgba(217, 119, 6, 0)')
+    ctx.fillStyle = amberGlow
+    ctx.fillRect(0, 0, W, H)
+
+    // Distant city amber glow (right)
+    const cityAmberGlow = ctx.createRadialGradient(W * 0.82, H * 0.50, 10, W * 0.82, H * 0.50, 420)
+    cityAmberGlow.addColorStop(0, 'rgba(251, 191, 36, 0.35)')
+    cityAmberGlow.addColorStop(0.5, 'rgba(180, 83, 9, 0.15)')
+    cityAmberGlow.addColorStop(1, 'rgba(180, 83, 9, 0)')
+    ctx.fillStyle = cityAmberGlow
+    ctx.fillRect(0, 0, W, H)
+
+    // Distant pinpoint horizon light bokeh (streetlights, towers, city lights)
+    for (let i = 0; i < 90; i++) {
+      const x = (i * 23.7) % W
+      const y = H * 0.485 + ((i * 7) % 18) - 9
+      const radius = 1.0 + ((i * 3) % 4) * 0.7
+      ctx.fillStyle =
+        i % 3 === 0
+          ? 'rgba(56, 189, 248, 0.7)'
+          : i % 3 === 1
+          ? 'rgba(251, 191, 36, 0.7)'
+          : 'rgba(248, 250, 252, 0.85)'
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Soft nocturnal stars in zenith
+    for (let i = 0; i < 160; i++) {
+      const sx = (i * 47.3) % W
+      const sy = ((i * 31.7) % (H * 0.38)) + 10
+      const starAlpha = 0.25 + ((i * 13) % 10) * 0.06
+      ctx.fillStyle = `rgba(226, 232, 240, ${starAlpha})`
+      ctx.beginPath()
+      ctx.arc(sx, sy, 0.8 + (i % 4 === 0 ? 0.6 : 0), 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    const canvasTexture = new THREE.CanvasTexture(canvas)
+    canvasTexture.mapping = THREE.EquirectangularReflectionMapping
+    canvasTexture.colorSpace = THREE.SRGBColorSpace
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer)
+    pmremGenerator.compileEquirectangularShader()
+    const renderTarget = pmremGenerator.fromEquirectangular(canvasTexture)
+    const envMap = renderTarget.texture
+
+    pmremGenerator.dispose()
+    canvasTexture.dispose()
+
+    this.envMapCache = envMap
+    return envMap
+  }
 
   /**
    * 1. High-Density AI GPU Server Rack Faceplate Albedo Texture (1024 x 2048)
-   * Depicts a complete 42U EIA-310 rack:
-   * - Top 2U: High-speed spine network switch with 32 QSFP-DD optical ports & patch cables
-   * - Middle 36U: Six 6U/8U GPU Accelerator Blades (NVIDIA HGX / DGX SuperPOD architecture)
-   *   with drive sleds, release handles, hex ventilation grilles, and gold/cyan interconnects
-   * - Bottom 4U: 6 redundant hot-swappable titanium power supply units (PSUs)
-   * - Side Rails: Numbered EIA equipment rails (U1 to U42)
+   * Supports two distinct industrial architectural themes:
+   * - 'cyan': Hall A (Foundation Training Cluster: Quantum-X800 IB Spine + HGX-H100 SXM5)
+   * - 'amber': Hall B (Inference & MoE Swarm: Spectrum-4 800G Spine + B200 NVL72 / TPU)
    */
-  public static getServerRackAlbedoTexture(): THREE.CanvasTexture {
-    const key = 'rack_albedo'
+  public static getServerRackAlbedoTexture(theme: 'cyan' | 'amber' = 'cyan'): THREE.CanvasTexture {
+    const key = `rack_albedo_${theme}`
     if (this.cache.has(key)) return this.cache.get(key)!
 
     const W = 1024
@@ -32,8 +136,10 @@ export class PbrTextureGenerator {
     canvas.height = H
     const ctx = canvas.getContext('2d')!
 
+    const isCyan = theme === 'cyan'
+
     // Base chassis: deep anodized industrial slate black
-    ctx.fillStyle = '#0a0f16'
+    ctx.fillStyle = isCyan ? '#0a0f16' : '#110e14'
     ctx.fillRect(0, 0, W, H)
 
     // Side 19" EIA-310 Vertical Mounting Rails (brushed titanium/aluminum)
@@ -75,7 +181,7 @@ export class PbrTextureGenerator {
 
       // U numbers every 5 units
       if (u % 5 === 0) {
-        ctx.fillStyle = '#38bdf8'
+        ctx.fillStyle = isCyan ? '#38bdf8' : '#fbbf24'
         ctx.fillText(`${u}`, railW / 2, y + uHeight * 0.6)
         ctx.fillText(`${u}`, W - railW / 2, y + uHeight * 0.6)
       }
@@ -87,18 +193,22 @@ export class PbrTextureGenerator {
     // TOP 2U: Network Spine Switch (U41-U42)
     const switchY = 0
     const switchH = uHeight * 2.2
-    ctx.fillStyle = '#111c2a'
+    ctx.fillStyle = isCyan ? '#111c2a' : '#221510'
     ctx.fillRect(bayX, switchY, bayW, switchH)
     // Bezel border
-    ctx.strokeStyle = '#0284c7'
+    ctx.strokeStyle = isCyan ? '#0284c7' : '#d97706'
     ctx.lineWidth = 4
     ctx.strokeRect(bayX + 4, switchY + 4, bayW - 8, switchH - 8)
 
     // Switch Brand Header & Status
-    ctx.fillStyle = '#38bdf8'
+    ctx.fillStyle = isCyan ? '#38bdf8' : '#fbbf24'
     ctx.font = 'bold 22px sans-serif'
     ctx.textAlign = 'left'
-    ctx.fillText('CORELINE // QUANTUM-X800 IB SPINE', bayX + 24, switchY + 36)
+    ctx.fillText(
+      isCyan ? 'CORELINE // QUANTUM-X800 IB SPINE' : 'CORELINE // SPECTRUM-4 64P 800G SWARM',
+      bayX + 24,
+      switchY + 36
+    )
 
     // 32 High-Speed QSFP-DD 800G Optical Transceiver Ports
     const portW = 20
@@ -112,20 +222,24 @@ export class PbrTextureGenerator {
       const px = startPortX + (p % 16) * (portW + portGap)
       const py = p < 16 ? portRow1Y : portRow2Y
       // Port metal cage
-      ctx.fillStyle = '#334155'
+      ctx.fillStyle = isCyan ? '#334155' : '#475569'
       ctx.fillRect(px, py, portW, portH)
       // Optical connector aperture
-      ctx.fillStyle = '#0284c7'
+      ctx.fillStyle = isCyan ? '#0284c7' : '#b45309'
       ctx.fillRect(px + 4, py + 4, portW - 8, portH - 8)
       // Link status LED
-      ctx.fillStyle = p % 3 === 0 ? '#10b981' : '#06b6d4'
+      if (isCyan) {
+        ctx.fillStyle = p % 3 === 0 ? '#10b981' : '#06b6d4'
+      } else {
+        ctx.fillStyle = p % 3 === 0 ? '#f59e0b' : '#fbbf24'
+      }
       ctx.beginPath()
       ctx.arc(px + portW / 2, py - 4, 3, 0, Math.PI * 2)
       ctx.fill()
     }
 
     // SIX HEAVY GPU ACCELERATOR CHASSIS (U5 to U40)
-    // 6 blades, each ~5.5U high
+    // 6 blades, each ~5.8U high
     const bladeH = uHeight * 5.8
     const bladeStartY = switchH + 12
 
@@ -134,26 +248,36 @@ export class PbrTextureGenerator {
 
       // Blade Main Enclosure with chamfered industrial frame
       const bladeGrad = ctx.createLinearGradient(bayX, by, bayX, by + bladeH)
-      bladeGrad.addColorStop(0, '#15202e')
-      bladeGrad.addColorStop(0.5, '#1e293b')
-      bladeGrad.addColorStop(1, '#0f172a')
+      if (isCyan) {
+        bladeGrad.addColorStop(0, '#15202e')
+        bladeGrad.addColorStop(0.5, '#1e293b')
+        bladeGrad.addColorStop(1, '#0f172a')
+      } else {
+        bladeGrad.addColorStop(0, '#261b18')
+        bladeGrad.addColorStop(0.5, '#2e201c')
+        bladeGrad.addColorStop(1, '#1a1210')
+      }
       ctx.fillStyle = bladeGrad
       ctx.fillRect(bayX + 2, by, bayW - 4, bladeH)
 
       // Outer bezel trim
-      ctx.strokeStyle = '#334155'
+      ctx.strokeStyle = isCyan ? '#334155' : '#573a2e'
       ctx.lineWidth = 3
       ctx.strokeRect(bayX + 2, by, bayW - 4, bladeH)
 
       // Top identification banner on each blade
-      ctx.fillStyle = '#090e17'
+      ctx.fillStyle = isCyan ? '#090e17' : '#140c0a'
       ctx.fillRect(bayX + 16, by + 8, bayW - 32, 28)
-      ctx.fillStyle = '#38bdf8'
+
+      ctx.fillStyle = isCyan ? '#38bdf8' : '#fbbf24'
       ctx.font = 'bold 18px monospace'
-      ctx.fillText(`HGX-H100 [BLADE-${String(b + 1).padStart(2, '0')}] // 8x SXM5 80GB`, bayX + 28, by + 28)
+      const bladeLabel = isCyan
+        ? `HGX-H100 [BLADE-${String(b + 1).padStart(2, '0')}] // 8x SXM5 80GB`
+        : `B200 NVL72 [BLADE-${String(b + 1).padStart(2, '0')}] // 72x BLACKWELL SWARM`
+      ctx.fillText(bladeLabel, bayX + 28, by + 28)
 
       // Blade Health / Power indicator
-      ctx.fillStyle = '#10b981'
+      ctx.fillStyle = isCyan ? '#10b981' : '#f59e0b'
       ctx.beginPath()
       ctx.arc(bayX + bayW - 40, by + 22, 6, 0, Math.PI * 2)
       ctx.fill()
@@ -168,7 +292,7 @@ export class PbrTextureGenerator {
       ctx.fillRect(ventX, ventY, ventW, ventH)
 
       // Draw dense honeycomb ventilation perforations
-      ctx.fillStyle = '#0f1926'
+      ctx.fillStyle = isCyan ? '#0f1926' : '#261510'
       const hexStep = 12
       for (let hx = ventX + 6; hx < ventX + ventW - 6; hx += hexStep) {
         for (let hy = ventY + 6; hy < ventY + ventH - 6; hy += hexStep) {
@@ -178,27 +302,39 @@ export class PbrTextureGenerator {
         }
       }
 
+      // Copper heat-pipe glimmer behind mesh for Amber B200 swarm
+      if (!isCyan) {
+        ctx.fillStyle = 'rgba(217, 119, 6, 0.22)'
+        for (let px = ventX + 24; px < ventX + ventW - 24; px += 48) {
+          ctx.fillRect(px, ventY + 12, 16, ventH - 24)
+        }
+      }
+
       // Front-access E1.S NVMe SSD Drive Sleds (8 hot-swap drives)
       const driveY = by + bladeH - 44
       const driveW = (bayW - 48) / 8
       for (let d = 0; d < 8; d++) {
         const dx = bayX + 24 + d * driveW
         // Drive sled metal bezel
-        ctx.fillStyle = '#1e293b'
+        ctx.fillStyle = isCyan ? '#1e293b' : '#332420'
         ctx.fillRect(dx, driveY, driveW - 6, 32)
-        ctx.strokeStyle = '#475569'
+        ctx.strokeStyle = isCyan ? '#475569' : '#573a2e'
         ctx.lineWidth = 1.5
         ctx.strokeRect(dx, driveY, driveW - 6, 32)
         // Ejector latch handle
-        ctx.fillStyle = '#0284c7'
+        ctx.fillStyle = isCyan ? '#0284c7' : '#d97706'
         ctx.fillRect(dx + 4, driveY + 12, 14, 8)
         // Drive activity LED
-        ctx.fillStyle = (b + d) % 4 === 0 ? '#38bdf8' : '#10b981'
+        if (isCyan) {
+          ctx.fillStyle = (b + d) % 4 === 0 ? '#38bdf8' : '#10b981'
+        } else {
+          ctx.fillStyle = (b + d) % 3 === 0 ? '#f59e0b' : (b + d) % 3 === 1 ? '#ef4444' : '#fbbf24'
+        }
         ctx.fillRect(dx + driveW - 14, driveY + 6, 4, 4)
       }
 
       // Heavy ergonomic release handles on left and right
-      ctx.fillStyle = '#64748b'
+      ctx.fillStyle = isCyan ? '#64748b' : '#94a3b8'
       ctx.fillRect(bayX + 6, by + bladeH * 0.35, 10, bladeH * 0.3)
       ctx.fillRect(bayX + bayW - 16, by + bladeH * 0.35, 10, bladeH * 0.3)
     }
@@ -206,18 +342,18 @@ export class PbrTextureGenerator {
     // BOTTOM 4U: Redundant Power Supply Units (U1-U4)
     const psuY = H - uHeight * 4.2
     const psuH = uHeight * 4
-    ctx.fillStyle = '#0d1520'
+    ctx.fillStyle = isCyan ? '#0d1520' : '#1a100d'
     ctx.fillRect(bayX, psuY, bayW, psuH)
-    ctx.strokeStyle = '#334155'
+    ctx.strokeStyle = isCyan ? '#334155' : '#4a3028'
     ctx.lineWidth = 3
     ctx.strokeRect(bayX + 2, psuY, bayW - 4, psuH)
 
-    // 6 Hot-Swappable 3300W Titanium PSUs
+    // 6 Hot-Swappable Titanium PSUs
     const psuW = (bayW - 36) / 6
     for (let p = 0; p < 6; p++) {
       const px = bayX + 18 + p * psuW
       // PSU Enclosure
-      ctx.fillStyle = '#1e293b'
+      ctx.fillStyle = isCyan ? '#1e293b' : '#2b1f1a'
       ctx.fillRect(px, psuY + 14, psuW - 8, psuH - 24)
       // AC Power Inlet
       ctx.fillStyle = '#020617'
@@ -228,7 +364,7 @@ export class PbrTextureGenerator {
       ctx.arc(px + (psuW - 8) / 2, psuY + psuH - 50, 24, 0, Math.PI * 2)
       ctx.fill()
       // Status LED
-      ctx.fillStyle = '#10b981'
+      ctx.fillStyle = isCyan ? '#10b981' : p % 2 === 0 ? '#f59e0b' : '#10b981'
       ctx.beginPath()
       ctx.arc(px + 16, psuY + psuH - 18, 4, 0, Math.PI * 2)
       ctx.fill()
@@ -238,6 +374,7 @@ export class PbrTextureGenerator {
     texture.colorSpace = THREE.SRGBColorSpace
     texture.wrapS = THREE.ClampToEdgeWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = this.maxAnisotropy
     this.cache.set(key, texture)
     return texture
   }
@@ -326,6 +463,7 @@ export class PbrTextureGenerator {
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.ClampToEdgeWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = this.maxAnisotropy
     this.cache.set(key, texture)
     return texture
   }
@@ -372,6 +510,7 @@ export class PbrTextureGenerator {
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.ClampToEdgeWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = this.maxAnisotropy
     this.cache.set(key, texture)
     return texture
   }
@@ -437,6 +576,7 @@ export class PbrTextureGenerator {
     texMap.colorSpace = THREE.SRGBColorSpace
     texMap.wrapS = THREE.RepeatWrapping
     texMap.wrapT = THREE.RepeatWrapping
+    texMap.anisotropy = this.maxAnisotropy
 
     // Normal map for recessed joints
     const cNorm = document.createElement('canvas')
@@ -454,6 +594,7 @@ export class PbrTextureGenerator {
     const texNorm = new THREE.CanvasTexture(cNorm)
     texNorm.wrapS = THREE.RepeatWrapping
     texNorm.wrapT = THREE.RepeatWrapping
+    texNorm.anisotropy = this.maxAnisotropy
 
     this.cache.set(mapKey, texMap)
     this.cache.set(normKey, texNorm)
@@ -523,6 +664,7 @@ export class PbrTextureGenerator {
     texture.colorSpace = THREE.SRGBColorSpace
     texture.wrapS = THREE.ClampToEdgeWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = this.maxAnisotropy
     this.cache.set(key, texture)
     return texture
   }

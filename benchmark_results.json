@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-10-15T13:40:04.358Z",
+  "renderInfo": {
+    "calls": 2438,
+    "triangles": 46728,
+    "points": 340,
+    "lines": 162,
+    "geometries": 278,
+    "textures": 12,
+    "hasEnvironment": true,
+    "toneMappingExposure": 1.25
+  },
+  "measuredFps": 1
+}

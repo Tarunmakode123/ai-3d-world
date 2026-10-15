@@ -87,9 +87,8 @@ export class CampusScene {
   private cinematicTimer: number = 0
   public cinematicWaypoints = [
     { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-6, 44, 48), target: new THREE.Vector3(5, 2.0, -7), duration: 9 },
-    { name: 'Representative PBR Rack & Cutaway PoC', pos: new THREE.Vector3(-12.7, 3.8, 10.5), target: new THREE.Vector3(-12.7, 2.0, 6), duration: 8 },
-    { name: 'Hall A // Foundation Training Cluster', pos: new THREE.Vector3(-12, 16, 8), target: new THREE.Vector3(-11, 2.5, -9), duration: 7 },
-    { name: 'Hall B // Inference & MoE Swarm', pos: new THREE.Vector3(16, 16, 4), target: new THREE.Vector3(23, 2.5, -9), duration: 7 },
+    { name: 'Hall A Compute // 42U PBR Cluster', pos: new THREE.Vector3(-8, 12, 6), target: new THREE.Vector3(-11, 2.5, -9), duration: 8 },
+    { name: 'Hall B AI Swarm // B200 NVL72 Racks', pos: new THREE.Vector3(18, 12, 6), target: new THREE.Vector3(23, 2.5, -9), duration: 8 },
     { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
     { name: 'Power Substation & Fuel Reserve', pos: new THREE.Vector3(-42, 16, 16), target: new THREE.Vector3(-38, 3, 12), duration: 6 },
     { name: 'Network Vault & Optical Loop', pos: new THREE.Vector3(26, 16, -10), target: new THREE.Vector3(28, 3.5, -28), duration: 6 },
@@ -135,6 +134,12 @@ export class CampusScene {
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(this.renderer.domElement)
+
+    // Hardware anisotropic filtering configuration
+    PbrTextureGenerator.setMaxAnisotropy(this.renderer.capabilities.getMaxAnisotropy())
+
+    // Physical Image-Based Lighting (IBL) Nocturnal Environment Map
+    this.scene.environment = PbrTextureGenerator.getNocturnalEnvironmentMap(this.renderer)
 
     // 4. OrbitControls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
@@ -465,9 +470,15 @@ export class CampusScene {
       metalness: 0.75,
     })
 
+    const { map: floorMapA, normalMap: floorNormA } = PbrTextureGenerator.getRaisedFloorTexture()
+    floorMapA.repeat.set(14, 22)
+    floorNormA.repeat.set(14, 22)
+
     const raisedFloorMat = new THREE.MeshStandardMaterial({
-      color: 0x111c28, // computer access floor tiles
-      roughness: 0.3,
+      map: floorMapA,
+      normalMap: floorNormA,
+      normalScale: new THREE.Vector2(1.2, 1.2),
+      roughness: 0.35,
       metalness: 0.65,
     })
 
@@ -885,13 +896,14 @@ export class CampusScene {
     hallASign.position.set(-11, 5.5, -31.3)
     complexGroup.add(hallASign)
 
-    // Hall A Downlights (High-intensity electric cyan & blue downward wash)
-    const hallALight1 = new THREE.PointLight(0x22d3ee, 2.6, 36)
-    hallALight1.position.set(-11, 6.2, -16)
-    const hallALight2 = new THREE.PointLight(0x38bdf8, 2.4, 36)
-    hallALight2.position.set(-11, 6.2, 0)
-    complexGroup.add(hallALight1, hallALight2)
-    this.hallLights.push(hallALight1, hallALight2)
+    // Hall A Downlights (High-intensity electric cyan linear aisle wash matching reference)
+    const hallARowZs = [-24, -18, -12, -6, 0, 6]
+    hallARowZs.forEach((rowZ) => {
+      const coldAisleWash = new THREE.PointLight(0x06b6d4, 3.2, 22)
+      coldAisleWash.position.set(-11, 5.8, rowZ - 1.6)
+      complexGroup.add(coldAisleWash)
+      this.hallLights.push(coldAisleWash)
+    })
 
     // -------------------------------------------------------------
     // 5. HALL B INTERIOR (COMPLETELY OPEN TOP, DUAL AMBER/BLUE CONTRAST)
@@ -956,13 +968,14 @@ export class CampusScene {
     hallBSign.position.set(23, 5.5, -31.3)
     complexGroup.add(hallBSign)
 
-    // Hall B Downlights (Dual-Color: Warm Amber Hot Aisle + Cool Blue Compute Node Wash)
-    const hallBLightWarm = new THREE.PointLight(0xf97316, 2.6, 36)
-    hallBLightWarm.position.set(23, 6.2, -16)
-    const hallBLightCool = new THREE.PointLight(0x0284c7, 2.4, 36)
-    hallBLightCool.position.set(23, 6.2, 0)
-    complexGroup.add(hallBLightWarm, hallBLightCool)
-    this.hallLights.push(hallBLightWarm, hallBLightCool)
+    // Hall B Downlights (Warm Golden Amber & Orange Hot-Aisle Wash matching reference)
+    const hallBRowZs = [-24, -18, -12, -6, 0, 6]
+    hallBRowZs.forEach((rowZ, idx) => {
+      const hotAisleWash = new THREE.PointLight(idx % 2 === 0 ? 0xf59e0b : 0xf97316, 3.8, 22)
+      hotAisleWash.position.set(23, 5.8, rowZ - 1.6)
+      complexGroup.add(hotAisleWash)
+      this.hallLights.push(hotAisleWash)
+    })
 
     this.scene.add(complexGroup)
 
@@ -974,23 +987,6 @@ export class CampusScene {
   // DENSE HIGH-REALISM GPU SERVER RACKS
   // ==========================================
   private buildDenseServerRacks() {
-    // 42U Heavy Enterprise Server Rack Cabinet
-    const rackCabinetGeo = new THREE.BoxGeometry(2.2, 3.8, 1.3)
-    const rackFrameMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0f16, // deep matte black chassis
-      roughness: 0.35,
-      metalness: 0.6,
-    })
-
-    const serverBladeGeo = new THREE.BoxGeometry(2.05, 0.38, 0.14)
-    const bladeMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2937,
-      roughness: 0.4,
-      metalness: 0.5,
-    })
-
-    const ledGeo = new THREE.SphereGeometry(0.065, 8, 8)
-
     // Aisle containment end-cap panels & row signage materials
     const containmentPanelMat = new THREE.MeshStandardMaterial({
       color: 0x1e293b,
@@ -1006,7 +1002,7 @@ export class CampusScene {
     })
 
     // ==========================================
-    // HALL A: 48 RACKS IN 6 DENSE ROWS (8 RACKS PER ROW)
+    // HALL A: 48 HIGH-FIDELITY PBR RACKS IN 6 ROWS (8 RACKS PER ROW)
     // Front to back: Cold Aisle Containment with Electric Cyan Glow
     // ==========================================
     const hallARowZs = [-24, -18, -12, -6, 0, 6]
@@ -1049,71 +1045,62 @@ export class CampusScene {
         const posX = -22 + col * 3.1
         const posZ = rowZ
 
-        const rackGroup = new THREE.Group()
-        rackGroup.position.set(posX, 1.9 + 0.15, posZ)
-
-        // Outer Cabinet
-        const cabinet = new THREE.Mesh(rackCabinetGeo, rackFrameMat)
-        cabinet.castShadow = true
-        cabinet.receiveShadow = true
-        cabinet.userData = {
+        const rackData: ServerRack = {
           id: rackId,
-          name: `${rackId} (NVIDIA H100 SXM5 / 3.2 Tbps NVLink)`,
-          type: 'rack',
           hallId: 'hall-a',
+          row: rowIndex + 1,
+          col: col + 1,
+          position: [posX, 0.15, posZ],
+          gpuType: 'NVIDIA H100 SXM5',
+          gpuCount: 8,
+          gpuUtilisation: 92,
+          temperature: 42,
+          powerKw: 10.4,
+          memoryUtilisation: 88,
+          coolingAirflowCfm: 820,
+          health: 'healthy',
+          currentJobId: null,
+          hasFault: false,
         }
-        rackGroup.add(cabinet)
-        this.interactiveMeshes.push(cabinet)
 
-        // 8 Horizontal Server Units per Rack (Visible Blades)
-        const rackLeds: THREE.MeshBasicMaterial[] = []
-        for (let b = 0; b < 8; b++) {
-          const blade = new THREE.Mesh(serverBladeGeo, bladeMat)
-          blade.position.set(0, -1.4 + b * 0.4, 0.62)
-          rackGroup.add(blade)
+        const rackGroup = PbrRackPoc.createPbrRack(rackData, 'cyan', (id, ledMat) => {
+          this.rackLedMaterials.set(id, [ledMat])
+        })
+        rackGroup.position.set(posX, 0.15, posZ)
 
-          // 4 Glowing Activity LEDs per unit (Cyan, Green, Blue)
-          for (let l = 0; l < 4; l++) {
-            const ledMat = new THREE.MeshBasicMaterial({
-              color: l === 0 ? 0x22d3ee : l === 1 ? 0x34d399 : l === 2 ? 0x38bdf8 : 0x06b6d4,
-            })
-            const led = new THREE.Mesh(ledGeo, ledMat)
-            led.position.set(-0.75 + l * 0.5, -1.4 + b * 0.4, 0.68)
-            rackGroup.add(led)
-            rackLeds.push(ledMat)
+        // For RACK-A-044, also add the showcase architectural bay section
+        if (rackId === 'RACK-A-044') {
+          const pbrBay = PbrRackPoc.createShowcaseHallSection(posX, posZ)
+          this.scene.add(pbrBay)
+        }
+
+        rackGroup.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.userData?.id === rackId) {
+            this.interactiveMeshes.push(child)
           }
-        }
+        })
 
-        // Top Status Beacon Tower
-        const beaconGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8)
-        const beaconMat = new THREE.MeshBasicMaterial({ color: 0x34d399 })
-        const beacon = new THREE.Mesh(beaconGeo, beaconMat)
-        beacon.position.set(0, 2.05, 0)
-        rackGroup.add(beacon)
-        rackLeds.push(beaconMat)
-
-        this.rackLedMaterials.set(rackId, rackLeds)
         this.rackMeshMap.set(rackId, rackGroup)
         this.scene.add(rackGroup)
       }
     })
 
     // ==========================================
-    // HALL B: 48 RACKS IN 6 DENSE ROWS (8 RACKS PER ROW)
-    // Alternating Hot/Cold Aisles (Amber/Red vs Electric Blue matching IMAGE 2)
+    // HALL B: 48 HIGH-FIDELITY PBR RACKS IN 6 ROWS (8 RACKS PER ROW)
+    // Warm Golden-Amber & Orange Hot-Aisle Wash matching Reference
     // ==========================================
     const hallBRowZs = [-24, -18, -12, -6, 0, 6]
     hallBRowZs.forEach((rowZ, rowIndex) => {
       const isHotAisle = rowIndex % 2 === 0
 
-      // Raised Floor Grille & Glow
+      // Raised Floor Grille & Amber Glow
       const grilleB = new THREE.Mesh(grilleGeo, grilleMat)
       grilleB.position.set(23, 0.17, rowZ - 1.6)
       this.scene.add(grilleB)
 
       const aisleRunnerGeo = new THREE.PlaneGeometry(24, 0.9)
       const aisleRunnerMat = new THREE.MeshBasicMaterial({
-        color: isHotAisle ? 0xef4444 : 0x0284c7,
+        color: isHotAisle ? 0xf59e0b : 0xd97706,
       })
       const aisleRunner = new THREE.Mesh(aisleRunnerGeo, aisleRunnerMat)
       aisleRunner.rotation.x = -Math.PI / 2
@@ -1131,7 +1118,7 @@ export class CampusScene {
       // Illuminated Row Badge: ROW B01 ... ROW B06
       const rowSignMatB = new THREE.MeshStandardMaterial({
         color: 0x07111e,
-        emissive: isHotAisle ? 0xf59e0b : 0x38bdf8,
+        emissive: 0xf59e0b,
         emissiveIntensity: 0.95,
         metalness: 0.8,
       })
@@ -1146,52 +1133,35 @@ export class CampusScene {
         const posX = 12 + col * 3.1
         const posZ = rowZ
 
-        const rackGroup = new THREE.Group()
-        rackGroup.position.set(posX, 1.9 + 0.15, posZ)
-
-        // Outer Cabinet
-        const cabinet = new THREE.Mesh(rackCabinetGeo, rackFrameMat)
-        cabinet.castShadow = true
-        cabinet.receiveShadow = true
-        cabinet.userData = {
+        const rackData: ServerRack = {
           id: rackId,
-          name: `${rackId} (NVIDIA B200 NVL / TPU v5p Cluster)`,
-          type: 'rack',
           hallId: 'hall-b',
+          row: rowIndex + 1,
+          col: col + 1,
+          position: [posX, 0.15, posZ],
+          gpuType: 'NVIDIA B200 NVL',
+          gpuCount: 8,
+          gpuUtilisation: 76,
+          temperature: 44,
+          powerKw: 11.2,
+          memoryUtilisation: 84,
+          coolingAirflowCfm: 780,
+          health: 'healthy',
+          currentJobId: null,
+          hasFault: false,
         }
-        rackGroup.add(cabinet)
-        this.interactiveMeshes.push(cabinet)
 
-        // 8 Horizontal Server Units
-        const rackLeds: THREE.MeshBasicMaterial[] = []
-        for (let b = 0; b < 8; b++) {
-          const blade = new THREE.Mesh(serverBladeGeo, bladeMat)
-          blade.position.set(0, -1.4 + b * 0.4, 0.62)
-          rackGroup.add(blade)
+        const rackGroup = PbrRackPoc.createPbrRack(rackData, 'amber', (id, ledMat) => {
+          this.rackLedMaterials.set(id, [ledMat])
+        })
+        rackGroup.position.set(posX, 0.15, posZ)
 
-          // 4 Glowing LEDs with Amber/Red hot accents and Blue compute nodes
-          for (let l = 0; l < 4; l++) {
-            let colHex = 0x38bdf8
-            if (isHotAisle) {
-              colHex = l === 0 ? 0xf59e0b : l === 1 ? 0xef4444 : 0x38bdf8
-            }
-            const ledMat = new THREE.MeshBasicMaterial({ color: colHex })
-            const led = new THREE.Mesh(ledGeo, ledMat)
-            led.position.set(-0.75 + l * 0.5, -1.4 + b * 0.4, 0.68)
-            rackGroup.add(led)
-            rackLeds.push(ledMat)
+        rackGroup.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.userData?.id === rackId) {
+            this.interactiveMeshes.push(child)
           }
-        }
+        })
 
-        // Top Status Beacon
-        const beaconGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8)
-        const beaconMat = new THREE.MeshBasicMaterial({ color: isHotAisle ? 0xf59e0b : 0x34d399 })
-        const beacon = new THREE.Mesh(beaconGeo, beaconMat)
-        beacon.position.set(0, 2.05, 0)
-        rackGroup.add(beacon)
-        rackLeds.push(beaconMat)
-
-        this.rackLedMaterials.set(rackId, rackLeds)
         this.rackMeshMap.set(rackId, rackGroup)
         this.scene.add(rackGroup)
       }
@@ -2335,17 +2305,31 @@ export class CampusScene {
       const leds = this.rackLedMaterials.get(rack.id)
       if (!leds) return
 
-      if (rack.hasFault) {
-        leds.forEach((m) => m.color.setHex(0xf87171))
-      } else if (rack.gpuUtilisation > 85) {
-        leds.forEach((m, idx) => {
-          m.color.setHex(idx % 2 === 0 ? 0xfbbf24 : 0x22d3ee)
-        })
-      } else {
-        leds.forEach((m, idx) => {
-          m.color.setHex(idx % 2 === 0 ? 0x22d3ee : 0x34d399)
-        })
-      }
+      const isError = rack.hasFault || rack.health === 'critical'
+      const isWarn = rack.health === 'warning' || rack.gpuUtilisation > 85
+
+      leds.forEach((m) => {
+        if (isError) {
+          m.color.setHex(0xf43f5e)
+          if ('emissive' in m) {
+            ;(m as THREE.MeshStandardMaterial).emissive.setHex(0xf43f5e)
+            ;(m as THREE.MeshStandardMaterial).emissiveIntensity = 3.5
+          }
+        } else if (isWarn) {
+          m.color.setHex(0xf59e0b)
+          if ('emissive' in m) {
+            ;(m as THREE.MeshStandardMaterial).emissive.setHex(0xf59e0b)
+            ;(m as THREE.MeshStandardMaterial).emissiveIntensity = 2.8
+          }
+        } else {
+          const healthyHex = rack.hallId === 'hall-b' ? 0xf59e0b : 0x10b981
+          m.color.setHex(healthyHex)
+          if ('emissive' in m) {
+            ;(m as THREE.MeshStandardMaterial).emissive.setHex(healthyHex)
+            ;(m as THREE.MeshStandardMaterial).emissiveIntensity = 2.2
+          }
+        }
+      })
     })
   }
 
@@ -2374,148 +2358,11 @@ export class CampusScene {
     }
   }
 
-  private upgradeServerRacks(prototype: THREE.Group) {
-    const assetLoader = AssetLoader.getInstance()
-
-    // 1. Upgrade Hall A Racks (NVIDIA H100 Foundation Cluster)
-    const hallARowZs = [-24, -18, -12, -6, 0, 6]
-    hallARowZs.forEach((rowZ, rowIndex) => {
-      for (let col = 0; col < 8; col++) {
-        const rackNumber = rowIndex * 8 + col + 1
-        const rackId = `RACK-A-${String(rackNumber).padStart(3, '0')}`
-        const posX = -22 + col * 3.1
-        const posZ = rowZ
-
-        const oldRack = this.rackMeshMap.get(rackId)
-        if (oldRack) {
-          this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== rackId)
-          this.scene.remove(oldRack)
-        }
-
-        if (rackId === 'RACK-A-044') {
-          // Representative High-Fidelity PBR Server Rack & Cutaway Architecture Section (Proof of Concept)
-          const rackData: ServerRack = {
-            id: rackId,
-            hallId: 'hall-a',
-            row: rowIndex + 1,
-            col: col + 1,
-            position: [posX, 0.15, posZ],
-            gpuType: 'NVIDIA H100 SXM5',
-            gpuCount: 8,
-            gpuUtilisation: 94,
-            temperature: 42,
-            powerKw: 10.2,
-            memoryUtilisation: 88,
-            coolingAirflowCfm: 650,
-            health: 'healthy',
-            currentJobId: 'job-01',
-            hasFault: false,
-          }
-          const pbrRack = PbrRackPoc.createShowcaseRack(rackData, (id, ledMat) => {
-            this.rackLedMaterials.set(id, [ledMat])
-          })
-          pbrRack.position.set(posX, 0.15, posZ)
-
-          // Add surrounding cutaway architectural bay (PBR raised floor, cold-aisle canopy, steel column, cyan wash)
-          const pbrBay = PbrRackPoc.createShowcaseHallSection(posX, posZ)
-          this.scene.add(pbrBay)
-
-          pbrRack.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.userData?.id === rackId) {
-              this.interactiveMeshes.push(child)
-            }
-          })
-          this.rackMeshMap.set(rackId, pbrRack)
-          this.scene.add(pbrRack)
-          return
-        }
-
-        const newRack = assetLoader.cloneModel(prototype, true)
-        newRack.position.set(posX, 0.15, posZ)
-
-        // Dedicated invisible raycast hit box for interactive selection
-        const hitBox = new THREE.Mesh(
-          new THREE.BoxGeometry(2.2, 3.8, 1.3),
-          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
-        )
-        hitBox.position.set(0, 1.9, 0)
-        hitBox.userData = {
-          id: rackId,
-          name: `${rackId} (NVIDIA H100 SXM5 / 3.2 Tbps NVLink)`,
-          type: 'rack',
-          hallId: 'hall-a',
-        }
-        newRack.add(hitBox)
-        this.interactiveMeshes.push(hitBox)
-
-        const rackLeds: THREE.MeshBasicMaterial[] = []
-        newRack.traverse((child) => {
-          if (
-            child instanceof THREE.Mesh &&
-            child.name.includes('Rack_LED') &&
-            child.material instanceof THREE.MeshBasicMaterial
-          ) {
-            rackLeds.push(child.material)
-          }
-        })
-
-        this.rackLedMaterials.set(rackId, rackLeds)
-        this.rackMeshMap.set(rackId, newRack)
-        this.scene.add(newRack)
-      }
-    })
-
-    // 2. Upgrade Hall B Racks (B200 NVL / TPU Inference Cluster)
-    const hallBRowZs = [-24, -18, -12, -6, 0, 6]
-    hallBRowZs.forEach((rowZ, rowIndex) => {
-      for (let col = 0; col < 8; col++) {
-        const rackNumber = rowIndex * 8 + col + 1
-        const rackId = `RACK-B-${String(rackNumber).padStart(3, '0')}`
-        const posX = 12 + col * 3.1
-        const posZ = rowZ
-
-        const oldRack = this.rackMeshMap.get(rackId)
-        if (oldRack) {
-          this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== rackId)
-          this.scene.remove(oldRack)
-        }
-
-        const newRack = assetLoader.cloneModel(prototype, true)
-        newRack.position.set(posX, 0.15, posZ)
-
-        // Dedicated invisible raycast hit box for interactive selection
-        const hitBox = new THREE.Mesh(
-          new THREE.BoxGeometry(2.2, 3.8, 1.3),
-          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
-        )
-        hitBox.position.set(0, 1.9, 0)
-        hitBox.userData = {
-          id: rackId,
-          name: `${rackId} (B200 NVL / TPU v5p Cluster)`,
-          type: 'rack',
-          hallId: 'hall-b',
-        }
-        newRack.add(hitBox)
-        this.interactiveMeshes.push(hitBox)
-
-        const rackLeds: THREE.MeshBasicMaterial[] = []
-        newRack.traverse((child) => {
-          if (
-            child instanceof THREE.Mesh &&
-            child.name.includes('Rack_LED') &&
-            child.material instanceof THREE.MeshBasicMaterial
-          ) {
-            rackLeds.push(child.material)
-          }
-        })
-
-        this.rackLedMaterials.set(rackId, rackLeds)
-        this.rackMeshMap.set(rackId, newRack)
-        this.scene.add(newRack)
-      }
-    })
-
-    // 3. Re-apply live telemetry colors to upgraded racks
+  private upgradeServerRacks(_prototype: THREE.Group) {
+    // All 96 server racks across Hall A (48 racks) and Hall B (48 racks) are built using
+    // shared-geometry high-fidelity PBR architecture (PbrRackPoc) with tangent-space normal maps,
+    // roughness maps, and dual-theme albedo textures.
+    // Preserve high-fidelity PBR racks and sync live telemetry:
     if (this.lastTelemetryRacks.length > 0) {
       this.updateRacksTelemetry(this.lastTelemetryRacks)
     }
