@@ -87,7 +87,7 @@ export class CampusScene {
   private cinematicTimer: number = 0
   public cinematicWaypoints = [
     { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-6, 44, 48), target: new THREE.Vector3(5, 2.0, -7), duration: 9 },
-    { name: 'Hall A Compute // 42U PBR Cluster', pos: new THREE.Vector3(-8, 12, 6), target: new THREE.Vector3(-11, 2.5, -9), duration: 8 },
+    { name: 'Hall A Compute // 42U AI Blade Bay', pos: new THREE.Vector3(-10.5, 3.4, 10.4), target: new THREE.Vector3(-12.7, 2.2, 6.0), duration: 8 },
     { name: 'Hall B AI Swarm // B200 NVL72 Racks', pos: new THREE.Vector3(18, 12, 6), target: new THREE.Vector3(23, 2.5, -9), duration: 8 },
     { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
     { name: 'Power Substation & Fuel Reserve', pos: new THREE.Vector3(-42, 16, 16), target: new THREE.Vector3(-38, 3, 12), duration: 6 },
