@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { AssetLoader } from './AssetLoader'
+import { PbrTextureGenerator } from './PbrTextureGenerator'
+import { PbrRackPoc } from './PbrRackPoc'
 import type {
   WeatherType,
   DayNightMode,
@@ -37,7 +39,7 @@ export class CampusScene {
   // Interactive Objects Registry
   private interactiveMeshes: THREE.Object3D[] = []
   private rackMeshMap: Map<string, THREE.Group> = new Map()
-  private rackLedMaterials: Map<string, THREE.MeshBasicMaterial[]> = new Map()
+  private rackLedMaterials: Map<string, (THREE.MeshBasicMaterial | THREE.MeshStandardMaterial)[]> = new Map()
   private lastTelemetryRacks: ServerRack[] = []
   private coolingTowerGroups: THREE.Group[] = []
   private transformerGroups: THREE.Group[] = []
@@ -85,6 +87,7 @@ export class CampusScene {
   private cinematicTimer: number = 0
   public cinematicWaypoints = [
     { name: 'Campus Aerial Overview', pos: new THREE.Vector3(-6, 44, 48), target: new THREE.Vector3(5, 2.0, -7), duration: 9 },
+    { name: 'Representative PBR Rack & Cutaway PoC', pos: new THREE.Vector3(-12.7, 3.8, 10.5), target: new THREE.Vector3(-12.7, 2.0, 6), duration: 8 },
     { name: 'Hall A // Foundation Training Cluster', pos: new THREE.Vector3(-12, 16, 8), target: new THREE.Vector3(-11, 2.5, -9), duration: 7 },
     { name: 'Hall B // Inference & MoE Swarm', pos: new THREE.Vector3(16, 16, 4), target: new THREE.Vector3(23, 2.5, -9), duration: 7 },
     { name: 'Cooling Towers & Liquid Chillers', pos: new THREE.Vector3(-34, 18, -12), target: new THREE.Vector3(-28, 4, -28), duration: 6 },
@@ -670,17 +673,19 @@ export class CampusScene {
     entranceCanopy.position.set(6, 4.8, 15.5)
     complexGroup.add(entranceCanopy)
 
-    // Luminous Illuminated "CORELINE" Signage on Entrance Facade (IMAGE 2)
-    const logoBadgeGeo = new THREE.BoxGeometry(8.5, 1.8, 0.3)
+    // Luminous Illuminated "CORELINE" Signage on Entrance Facade (Directly Matching IMAGE 2)
+    const signageTex = PbrTextureGenerator.getCorelineSignageTexture()
     const logoBadgeMat = new THREE.MeshStandardMaterial({
-      color: 0x07111e,
-      emissive: 0x22d3ee,
-      emissiveIntensity: 0.9,
+      map: signageTex,
+      emissiveMap: signageTex,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.25,
       roughness: 0.2,
-      metalness: 0.9,
+      metalness: 0.8,
     })
+    const logoBadgeGeo = new THREE.PlaneGeometry(8.5, 2.1)
     const logoBadge = new THREE.Mesh(logoBadgeGeo, logoBadgeMat)
-    logoBadge.position.set(6, 6.2, 14.2)
+    logoBadge.position.set(6, 6.2, 14.16)
     complexGroup.add(logoBadge)
 
     // Interior Warm Lobby Glow
@@ -2385,6 +2390,44 @@ export class CampusScene {
         if (oldRack) {
           this.interactiveMeshes = this.interactiveMeshes.filter((m) => m.userData?.id !== rackId)
           this.scene.remove(oldRack)
+        }
+
+        if (rackId === 'RACK-A-044') {
+          // Representative High-Fidelity PBR Server Rack & Cutaway Architecture Section (Proof of Concept)
+          const rackData: ServerRack = {
+            id: rackId,
+            hallId: 'hall-a',
+            row: rowIndex + 1,
+            col: col + 1,
+            position: [posX, 0.15, posZ],
+            gpuType: 'NVIDIA H100 SXM5',
+            gpuCount: 8,
+            gpuUtilisation: 94,
+            temperature: 42,
+            powerKw: 10.2,
+            memoryUtilisation: 88,
+            coolingAirflowCfm: 650,
+            health: 'healthy',
+            currentJobId: 'job-01',
+            hasFault: false,
+          }
+          const pbrRack = PbrRackPoc.createShowcaseRack(rackData, (id, ledMat) => {
+            this.rackLedMaterials.set(id, [ledMat])
+          })
+          pbrRack.position.set(posX, 0.15, posZ)
+
+          // Add surrounding cutaway architectural bay (PBR raised floor, cold-aisle canopy, steel column, cyan wash)
+          const pbrBay = PbrRackPoc.createShowcaseHallSection(posX, posZ)
+          this.scene.add(pbrBay)
+
+          pbrRack.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.userData?.id === rackId) {
+              this.interactiveMeshes.push(child)
+            }
+          })
+          this.rackMeshMap.set(rackId, pbrRack)
+          this.scene.add(pbrRack)
+          return
         }
 
         const newRack = assetLoader.cloneModel(prototype, true)
